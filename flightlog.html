@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drone Flight Log — GeoCart Spatial Toolkit</title>
+  <link rel="icon" type="image/svg+xml" href="../../assets/icons/favicon.svg" />
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <style>
+    /* ── Flight Log Specific ── */
+    .log-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      padding-bottom: 3rem;
+    }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: 1rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .toolbar-left, .toolbar-right { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+    .search-wrapper { width: 240px; }
+
+    /* Table row actions */
+    .row-actions { display: flex; gap: 0.35rem; }
+    .action-btn {
+      width: 28px; height: 28px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-active);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-muted);
+    }
+    .action-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .action-btn.del:hover { border-color: var(--danger); color: var(--danger); }
+
+    /* Mission type badge */
+    .mission-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .mission-mapping    { background: rgba(61,127,255,0.15); color: #3d7fff; }
+    .mission-survey     { background: rgba(0,212,200,0.12);  color: var(--accent); }
+    .mission-inspection { background: rgba(240,160,48,0.15); color: #f0a030; }
+    .mission-delivery   { background: rgba(0,196,122,0.12);  color: var(--success); }
+    .mission-training   { background: rgba(155,89,182,0.12); color: #9b59b6; }
+    .mission-other      { background: var(--bg-active);      color: var(--text-muted); }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      padding: 0.5rem 0;
+    }
+    .filter-chip {
+      padding: 0.25rem 0.65rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .filter-chip.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .filter-chip:hover:not(.active) { border-color: var(--text-muted); color: var(--text-primary); }
+
+    /* Sort indicator */
+    .sort-th { cursor: pointer; user-select: none; }
+    .sort-th:hover { color: var(--accent); }
+
+    /* Pagination */
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
+      padding: 1rem 0;
+    }
+    .page-btn {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .page-btn:hover, .page-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Modal form grid */
+    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+
+    @media (max-width: 900px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .search-wrapper { width: 100%; }
+    }
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .form-grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <div class="nav-brand">
+    <svg class="nav-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="var(--accent-dim)"/>
+      <circle cx="32" cy="32" r="16" stroke="var(--accent)" stroke-width="2" fill="none"/>
+      <circle cx="32" cy="32" r="5" fill="var(--accent)"/>
+      <line x1="32" y1="12" x2="32" y2="22" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="32" y1="42" x2="32" y2="52" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="12" y1="32" x2="22" y2="32" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="42" y1="32" x2="52" y2="32" stroke="var(--accent)" stroke-width="2"/>
+    </svg>
+    <span class="nav-title">GeoCart <span>Spatial Toolkit</span></span>
+  </div>
+  <div class="nav-actions">
+    <a href="../../index.html" class="nav-back">← Dashboard</a>
+    <button class="theme-toggle" title="Toggle theme">☀</button>
+  </div>
+</nav>
+
+<main class="page-wrapper">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-tag">Module 03</div>
+          <h1 class="page-title">Drone Flight Log</h1>
+          <p class="page-subtitle">Aviation-grade mission logging. All data stored locally in your browser.</p>
+        </div>
+        <div class="btn-group">
+          <button id="btn-export-csv" class="btn btn-secondary btn-sm">⬇ Export CSV</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+            ⬆ Import CSV
+            <input type="file" id="import-csv-input" accept=".csv" style="display:none" />
+          </label>
+          <button id="btn-add-log" class="btn btn-primary btn-sm">✈ Log Flight</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Flights</div>
+        <div class="stat-value accent" id="stat-total">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Flight Time</div>
+        <div class="stat-value" id="stat-time">0h 0m</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Unique Drones</div>
+        <div class="stat-value" id="stat-drones">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Unique Pilots</div>
+        <div class="stat-value" id="stat-pilots">0</div>
+      </div>
+    </div>
+
+    <!-- Log Section -->
+    <div class="log-layout">
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-wrapper">
+            <span class="search-icon">⊕</span>
+            <input type="text" id="search-input" class="form-control" placeholder="Search logs..." />
+          </div>
+          <div class="filter-bar">
+            <span class="filter-chip active" data-filter="all">All</span>
+            <span class="filter-chip" data-filter="Mapping">Mapping</span>
+            <span class="filter-chip" data-filter="Survey">Survey</span>
+            <span class="filter-chip" data-filter="Inspection">Inspection</span>
+            <span class="filter-chip" data-filter="Training">Training</span>
+            <span class="filter-chip" data-filter="Other">Other</span>
+          </div>
+        </div>
+        <div class="toolbar-right">
+          <span id="result-count" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);"></span>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="data-table-wrapper">
+        <table class="data-table" id="log-table">
+          <thead>
+            <tr>
+              <th class="sort-th" data-sort="date">Date ↕</th>
+              <th class="sort-th" data-sort="pilot">Pilot ↕</th>
+              <th class="sort-th" data-sort="drone">Drone ↕</th>
+              <th>Mission</th>
+              <th class="sort-th" data-sort="location">Location ↕</th>
+              <th class="sort-th" data-sort="duration">Duration ↕</th>
+              <th>Battery Cycles</th>
+              <th>Weather</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="log-tbody">
+            <!-- Populated by JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty state (shown when no records) -->
+      <div id="empty-state" class="empty-state" style="display:none;">
+        <svg class="empty-icon" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="40" cy="40" r="30" stroke="currentColor" stroke-width="1.5" stroke-dasharray="4 4"/>
+          <line x1="40" y1="10" x2="40" y2="70" stroke="currentColor" stroke-width="1.5"/>
+          <line x1="10" y1="40" x2="70" y2="40" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="40" cy="40" r="5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M28 22l5 3-3 5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M52 22l-5 3 3 5" stroke="currentColor" stroke-width="1.2"/>
+        </svg>
+        <div class="empty-title">No Flight Logs</div>
+        <div class="empty-text">No missions have been logged yet. Click "Log Flight" to record your first mission. Data is stored locally in your browser.</div>
+        <button class="btn btn-primary btn-sm" onclick="document.getElementById('btn-add-log').click()">✈ Log First Flight</button>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination"></div>
+
+    </div>
+  </div>
+</main>
+
+<!-- ── Add/Edit Flight Modal ── -->
+<div class="modal-overlay" id="modal-flight">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">LOG FLIGHT MISSION</div>
+      <button class="modal-close" onclick="ModalManager.close('modal-flight')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-id" />
+      <div class="form-grid-2">
+        <div class="form-group">
+          <label class="form-label">Date *</label>
+          <input type="date" id="f-date" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mission Type *</label>
+          <select id="f-mission" class="form-control">
+            <option value="">— Select —</option>
+            <option value="Mapping">Mapping</option>
+            <option value="Survey">Survey</option>
+            <option value="Inspection">Inspection</option>
+            <option value="Delivery">Delivery</option>
+            <option value="Training">Training</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pilot Name *</label>
+          <input type="text" id="f-pilot" class="form-control" placeholder="Full name" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Drone / Aircraft *</label>
+          <input type="text" id="f-drone" class="form-control" placeholder="e.g. DJI Phantom 4 RTK" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Flight Location *</label>
+          <input type="text" id="f-location" class="form-control" placeholder="e.g. Thika Industrial Area" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Flight Duration (minutes) *</label>
+          <input type="number" id="f-duration" class="form-control" placeholder="45" min="1" max="999" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Battery Cycles Used</label>
+          <input type="number" id="f-battery" class="form-control" placeholder="3" min="0" max="99" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">GSD / Altitude</label>
+          <input type="text" id="f-altitude" class="form-control" placeholder="e.g. 120m / 3cm GSD" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weather & Conditions</label>
+        <input type="text" id="f-weather" class="form-control" placeholder="e.g. Clear, 18km/h NE wind, 22°C" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mission Notes</label>
+        <textarea id="f-notes" class="form-control" rows="3" placeholder="Area coverage, client, issues encountered..."></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Maintenance Notes</label>
+        <textarea id="f-maintenance" class="form-control" rows="2" placeholder="Pre/post-flight checks, battery health, repairs..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="ModalManager.close('modal-flight')">Cancel</button>
+      <button class="btn btn-primary" id="btn-save-log">✈ Save Log</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── View Log Modal ── -->
+<div class="modal-overlay" id="modal-view">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <div class="modal-title">FLIGHT LOG DETAIL</div>
+      <button class="modal-close" onclick="ModalManager.close('modal-view')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-view-body">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="ModalManager.close('modal-view')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../../assets/js/app.js"></script>
+<script>
+/* ============================================================
+   Drone Flight Log — Full CRUD System
+   Storage: localStorage key 'geocart-flightlogs'
+   ============================================================ */
+
+const STORAGE_KEY = 'geocart-flightlogs';
+const PAGE_SIZE = 20;
+
+// State
+let allLogs = [];
+let filteredLogs = [];
+let currentPage = 1;
+let currentFilter = 'all';
+let searchQuery = '';
+let sortField = 'date';
+let sortAsc = false;
+
+// ── Load from storage ──
+function loadLogs() {
+  allLogs = Store.get(STORAGE_KEY, []);
+}
+
+// ── Save to storage ──
+function saveLogs() {
+  Store.set(STORAGE_KEY, allLogs);
+}
+
+// ── Apply filters & sort ──
+function applyFilters() {
+  let data = [...allLogs];
+
+  // Mission filter
+  if (currentFilter !== 'all') {
+    data = data.filter(l => l.mission === currentFilter);
+  }
+
+  // Search
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    data = data.filter(l =>
+      (l.pilot || '').toLowerCase().includes(q) ||
+      (l.drone || '').toLowerCase().includes(q) ||
+      (l.location || '').toLowerCase().includes(q) ||
+      (l.mission || '').toLowerCase().includes(q) ||
+      (l.notes || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort
+  data.sort((a, b) => {
+    let va = a[sortField] || '';
+    let vb = b[sortField] || '';
+    if (sortField === 'duration') { va = +va; vb = +vb; }
+    if (typeof va === 'string') va = va.toLowerCase();
+    if (typeof vb === 'string') vb = vb.toLowerCase();
+    return sortAsc ? (va > vb ? 1 : -1) : (va < vb ? 1 : -1);
+  });
+
+  filteredLogs = data;
+  currentPage = 1;
+  render();
+}
+
+// ── Mission badge HTML ──
+function missionBadge(type) {
+  const cls = (type || 'other').toLowerCase().replace(/\s+/g, '');
+  return `<span class="mission-badge mission-${cls}">${type || '—'}</span>`;
+}
+
+// ── Render table ──
+function render() {
+  const tbody = document.getElementById('log-tbody');
+  const emptyState = document.getElementById('empty-state');
+  const resultCount = document.getElementById('result-count');
+  const tableWrapper = document.querySelector('.data-table-wrapper');
+
+  // Stats
+  updateStats();
+
+  // Count info
+  resultCount.textContent = `${filteredLogs.length} record${filteredLogs.length !== 1 ? 's' : ''}`;
+
+  if (filteredLogs.length === 0) {
+    tableWrapper.style.display = 'none';
+    emptyState.style.display = 'flex';
+    renderPagination(0);
+    return;
+  }
+
+  tableWrapper.style.display = 'block';
+  emptyState.style.display = 'none';
+
+  // Paginate
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageData = filteredLogs.slice(start, start + PAGE_SIZE);
+
+  tbody.innerHTML = pageData.map(log => `
+    <tr>
+      <td class="mono">${log.date || '—'}</td>
+      <td>${log.pilot || '—'}</td>
+      <td class="mono" style="font-size:0.8rem;">${log.drone || '—'}</td>
+      <td>${missionBadge(log.mission)}</td>
+      <td>${log.location || '—'}</td>
+      <td class="mono">${formatMinutes(log.duration)}</td>
+      <td class="mono" style="text-align:center;">${log.battery || '—'}</td>
+      <td style="font-size:0.8rem;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${log.weather || '—'}</td>
+      <td>
+        <div class="row-actions">
+          <button class="action-btn" onclick="viewLog('${log.id}')" title="View">⊕</button>
+          <button class="action-btn" onclick="editLog('${log.id}')" title="Edit">✎</button>
+          <button class="action-btn del" onclick="deleteLog('${log.id}')" title="Delete">✕</button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  renderPagination(filteredLogs.length);
+}
+
+function formatMinutes(mins) {
+  if (!mins) return '—';
+  const h = Math.floor(+mins / 60);
+  const m = +mins % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// ── Pagination ──
+function renderPagination(total) {
+  const container = document.getElementById('pagination');
+  const pages = Math.ceil(total / PAGE_SIZE);
+  if (pages <= 1) { container.innerHTML = ''; return; }
+
+  let html = `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="goPage(${currentPage-1})">‹</button>`;
+  for (let i = 1; i <= pages; i++) {
+    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" ${currentPage === pages ? 'disabled' : ''} onclick="goPage(${currentPage+1})">›</button>`;
+  container.innerHTML = html;
+}
+
+function goPage(p) {
+  currentPage = p;
+  render();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Stats ──
+function updateStats() {
+  const data = allLogs;
+  const totalMins = data.reduce((s, l) => s + (+l.duration || 0), 0);
+  const h = Math.floor(totalMins / 60);
+  const m = totalMins % 60;
+  const drones = new Set(data.map(l => l.drone).filter(Boolean)).size;
+  const pilots = new Set(data.map(l => l.pilot).filter(Boolean)).size;
+
+  document.getElementById('stat-total').textContent = data.length;
+  document.getElementById('stat-time').textContent = `${h}h ${m}m`;
+  document.getElementById('stat-drones').textContent = drones;
+  document.getElementById('stat-pilots').textContent = pilots;
+}
+
+// ── CRUD ──
+function getFormData() {
+  const fields = ['date','mission','pilot','drone','location','duration','battery','altitude','weather','notes','maintenance'];
+  const data = {};
+  for (const f of fields) {
+    data[f] = document.getElementById(`f-${f}`)?.value?.trim() || '';
+  }
+  return data;
+}
+
+function openAddModal() {
+  document.getElementById('modal-title').textContent = 'LOG FLIGHT MISSION';
+  document.getElementById('edit-id').value = '';
+  // Reset form
+  ['date','mission','pilot','drone','location','duration','battery','altitude','weather','notes','maintenance']
+    .forEach(f => { const el = document.getElementById(`f-${f}`); if (el) el.value = ''; });
+  // Default date to today
+  document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
+  ModalManager.open('modal-flight');
+}
+
+function editLog(id) {
+  const log = allLogs.find(l => l.id === id);
+  if (!log) return;
+  document.getElementById('modal-title').textContent = 'EDIT FLIGHT LOG';
+  document.getElementById('edit-id').value = id;
+  ['date','mission','pilot','drone','location','duration','battery','altitude','weather','notes','maintenance']
+    .forEach(f => {
+      const el = document.getElementById(`f-${f}`);
+      if (el) el.value = log[f] || '';
+    });
+  ModalManager.open('modal-flight');
+}
+
+function saveLog() {
+  const data = getFormData();
+  // Validate required
+  const required = { date:'Date', pilot:'Pilot', drone:'Drone', location:'Location', duration:'Duration', mission:'Mission Type' };
+  for (const [k, label] of Object.entries(required)) {
+    if (!data[k]) { Toast.error(`${label} is required`); return; }
+  }
+
+  const editId = document.getElementById('edit-id').value;
+  if (editId) {
+    const idx = allLogs.findIndex(l => l.id === editId);
+    if (idx >= 0) allLogs[idx] = { ...allLogs[idx], ...data };
+    Toast.success('Flight log updated');
+  } else {
+    allLogs.unshift({ id: generateId(), createdAt: new Date().toISOString(), ...data });
+    Toast.success('Flight logged successfully');
+  }
+
+  saveLogs();
+  applyFilters();
+  ModalManager.close('modal-flight');
+}
+
+function deleteLog(id) {
+  if (!confirm('Delete this flight log? This cannot be undone.')) return;
+  allLogs = allLogs.filter(l => l.id !== id);
+  saveLogs();
+  applyFilters();
+  Toast.success('Log deleted');
+}
+
+function viewLog(id) {
+  const log = allLogs.find(l => l.id === id);
+  if (!log) return;
+
+  const fieldLabels = {
+    date:'Date', mission:'Mission Type', pilot:'Pilot', drone:'Drone/Aircraft',
+    location:'Location', duration:'Duration', battery:'Battery Cycles',
+    altitude:'GSD / Altitude', weather:'Weather', notes:'Mission Notes',
+    maintenance:'Maintenance Notes'
+  };
+
+  let html = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">`;
+  for (const [k, label] of Object.entries(fieldLabels)) {
+    let val = log[k] || '—';
+    if (k === 'duration') val = formatMinutes(log[k]);
+    if (k === 'mission') val = missionBadge(log[k]);
+    html += `<div style="grid-column:${['notes','maintenance','weather'].includes(k) ? '1/-1' : 'auto'}">
+      <div class="form-label">${label}</div>
+      <div style="font-family:var(--font-mono);font-size:0.88rem;color:var(--text-primary);padding:0.5rem 0;border-bottom:1px solid var(--border-subtle);">${val}</div>
+    </div>`;
+  }
+  html += `</div>`;
+  document.getElementById('modal-view-body').innerHTML = html;
+  ModalManager.open('modal-view');
+}
+
+// ── Filter Chips ──
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    currentFilter = chip.dataset.filter;
+    applyFilters();
+  });
+});
+
+// ── Search ──
+document.getElementById('search-input').addEventListener('input', debounce(e => {
+  searchQuery = e.target.value.trim();
+  applyFilters();
+}, 250));
+
+// ── Sort columns ──
+document.querySelectorAll('.sort-th').forEach(th => {
+  th.addEventListener('click', () => {
+    if (sortField === th.dataset.sort) {
+      sortAsc = !sortAsc;
+    } else {
+      sortField = th.dataset.sort;
+      sortAsc = true;
+    }
+    applyFilters();
+  });
+});
+
+// ── Export CSV ──
+document.getElementById('btn-export-csv').addEventListener('click', () => {
+  const headers = ['date','mission','pilot','drone','location','duration','battery','altitude','weather','notes','maintenance'];
+  exportCSV(allLogs, `geocart-flightlog-${Date.now()}.csv`, headers);
+});
+
+// ── Import CSV ──
+document.getElementById('import-csv-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const result = await importCSV(file);
+    let imported = 0;
+    result.rows.forEach(row => {
+      if (row.date || row.pilot) {
+        allLogs.push({ id: generateId(), createdAt: new Date().toISOString(), ...row });
+        imported++;
+      }
+    });
+    saveLogs();
+    applyFilters();
+    Toast.success(`Imported ${imported} flight records`);
+  } catch (err) {
+    Toast.error(err.message);
+  }
+  e.target.value = '';
+});
+
+// ── Button events ──
+document.getElementById('btn-add-log').addEventListener('click', openAddModal);
+document.getElementById('btn-save-log').addEventListener('click', saveLog);
+
+// ── Init ──
+loadLogs();
+applyFilters();
+</script>
+</body>
+</html>
