@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoJSON / KML Viewer — GeoCart Spatial Toolkit</title>
+  <link rel="icon" type="image/svg+xml" href="../../assets/icons/favicon.svg" />
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    .viewer-layout {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 1.25rem;
+      height: calc(100vh - var(--nav-height) - 160px);
+      min-height: 520px;
+      padding: 1.5rem 0;
+    }
+    .viewer-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+    .viewer-map-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .map-container {
+      flex: 1;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+      min-height: 400px;
+    }
+    #viewer-map { width: 100%; height: 100%; min-height: 400px; }
+
+    /* Drop zone */
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-lg);
+      padding: 2rem 1.5rem;
+      text-align: center;
+      background: var(--bg-card);
+      transition: var(--transition);
+      cursor: pointer;
+      position: relative;
+    }
+    .drop-zone.drag-over {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .drop-zone-icon {
+      font-size: 2rem;
+      margin-bottom: 0.75rem;
+      color: var(--text-muted);
+    }
+    .drop-zone-title {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      margin-bottom: 0.4rem;
+    }
+    .drop-zone-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .drop-zone input[type=file] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* File info */
+    .file-info-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+    }
+    .file-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 0.82rem;
+    }
+    .file-info-row:last-child { border-bottom: none; }
+    .file-info-label {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .file-info-value {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      font-weight: 600;
+    }
+
+    /* Feature list */
+    .feature-list-container {
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .feat-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.75rem;
+      cursor: pointer;
+      border-radius: var(--radius);
+      transition: var(--transition);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .feat-row:last-child { border-bottom: none; }
+    .feat-row:hover { background: var(--bg-hover); }
+    .feat-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .feat-name { font-size: 0.8rem; color: var(--text-primary); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .feat-type { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); }
+
+    /* Properties panel */
+    .props-panel {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      max-height: 220px;
+      overflow-y: auto;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.7;
+      display: none;
+    }
+    .props-panel.visible { display: block; }
+    .prop-key { color: var(--accent); }
+    .prop-val { color: var(--text-secondary); }
+
+    /* Coordinate display overlay */
+    .map-coord-bar {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.4rem 0.9rem;
+      font-family: var(--font-mono);
+      font-size: 0.73rem;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    /* Layer coloring */
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    @media (max-width: 900px) {
+      .viewer-layout { grid-template-columns: 1fr; height: auto; }
+      .viewer-sidebar { max-height: none; order: 2; }
+      .viewer-map-wrap { order: 1; height: 60vw; min-height: 320px; }
+      .map-container { flex: unset; height: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <svg class="nav-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="var(--accent-dim)"/>
+      <circle cx="32" cy="32" r="16" stroke="var(--accent)" stroke-width="2" fill="none"/>
+      <circle cx="32" cy="32" r="5" fill="var(--accent)"/>
+      <line x1="32" y1="12" x2="32" y2="22" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="32" y1="42" x2="32" y2="52" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="12" y1="32" x2="22" y2="32" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="42" y1="32" x2="52" y2="32" stroke="var(--accent)" stroke-width="2"/>
+    </svg>
+    <span class="nav-title">GeoCart <span>Spatial Toolkit</span></span>
+  </div>
+  <div class="nav-actions">
+    <a href="../../index.html" class="nav-back">← Dashboard</a>
+    <button class="theme-toggle" title="Toggle theme">☀</button>
+  </div>
+</nav>
+
+<main class="page-wrapper">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-tag">Module 06</div>
+          <h1 class="page-title">GeoJSON / KML Viewer</h1>
+          <p class="page-subtitle">Drag and drop GeoJSON or KML files to render and inspect them. 100% client-side — nothing is uploaded.</p>
+        </div>
+        <div class="btn-group">
+          <button id="btn-export-layer" class="btn btn-secondary btn-sm" disabled>⬇ Export GeoJSON</button>
+          <button id="btn-clear-map" class="btn btn-danger btn-sm" disabled>⊗ Clear Map</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="viewer-layout">
+
+      <!-- Sidebar -->
+      <div class="viewer-sidebar">
+
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="drop-zone">
+          <input type="file" id="file-input" accept=".geojson,.json,.kml,.gpx" multiple />
+          <div class="drop-zone-icon">◉</div>
+          <div class="drop-zone-title">Drop File Here</div>
+          <div class="drop-zone-sub">GeoJSON, KML, or GPX<br/>Click to browse</div>
+        </div>
+
+        <!-- File Info -->
+        <div class="card" style="padding:1rem;" id="file-info-card" style="display:none;">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊕</span> File Info</div>
+            <span id="file-format-badge" class="badge badge-info"></span>
+          </div>
+          <div id="file-info-content">
+            <div class="empty-state" style="padding:1.5rem 1rem;">
+              <div class="empty-text" style="font-size:0.78rem;">No file loaded</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Geometry Stats -->
+        <div class="card" style="padding:1rem;" id="stats-card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">◈</span> Geometry Statistics</div>
+          </div>
+          <div id="stats-content">
+            <div class="empty-state" style="padding:1.5rem 1rem;">
+              <div class="empty-text" style="font-size:0.78rem;">Load a file to see statistics</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Feature List -->
+        <div class="card" style="padding:1rem;" id="features-card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊞</span> Features</div>
+            <span id="feat-count-badge" class="badge badge-neutral">0</span>
+          </div>
+          <div class="feature-list-container" id="feature-list">
+            <div class="empty-state" style="padding:1.5rem 1rem;">
+              <div class="empty-text" style="font-size:0.78rem;">No features loaded</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Properties Panel -->
+        <div class="card" style="padding:1rem;" id="props-card" style="display:none;">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">ℹ</span> Properties</div>
+            <span id="selected-feat-name" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);"></span>
+          </div>
+          <div class="props-panel visible" id="props-panel">
+            <div style="color:var(--text-muted);font-size:0.78rem;">Click a feature to inspect properties</div>
+          </div>
+        </div>
+
+      </div><!-- /sidebar -->
+
+      <!-- Map Section -->
+      <div class="viewer-map-wrap">
+        <div class="map-container">
+          <div id="viewer-map"></div>
+        </div>
+        <div class="map-coord-bar">
+          <span id="vmap-coord">Move mouse over map</span>
+          <span id="vmap-zoom" style="color:var(--text-muted);">Zoom: 5</span>
+          <span id="vmap-bounds" style="color:var(--text-muted);font-size:0.68rem;"></span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<div id="toast-container"></div>
+<script src="../../assets/js/app.js"></script>
+<script>
+/* ============================================================
+   GeoJSON / KML Viewer — Client-Side File Renderer
+   Supports: GeoJSON, KML (converted to GeoJSON), GPX
+   ============================================================ */
+
+// ── Map Init ──
+const vmap = L.map('viewer-map', {
+  center: [-0.8, 37.5],
+  zoom: 5,
+  zoomControl: true
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19
+}).addTo(vmap);
+
+L.control.scale({ imperial: false, position: 'bottomright' }).addTo(vmap);
+
+// Update coord display
+vmap.on('mousemove', e => {
+  document.getElementById('vmap-coord').textContent =
+    `${e.latlng.lat.toFixed(6)}°, ${e.latlng.lng.toFixed(6)}°`;
+});
+vmap.on('zoomend', () => {
+  document.getElementById('vmap-zoom').textContent = `Zoom: ${vmap.getZoom()}`;
+});
+
+// ── State ──
+let loadedLayers = [];
+let loadedGeoJSON = null;
+let selectedFeatureIdx = null;
+
+// Colour palette for multiple layers
+const LAYER_COLORS = [
+  '#00d4c8', '#3d7fff', '#f0a030', '#00c47a',
+  '#9b59b6', '#ff6b6b', '#17a2b8', '#ffc107'
+];
+let colorIdx = 0;
+function nextColor() { return LAYER_COLORS[colorIdx++ % LAYER_COLORS.length]; }
+
+// ── Drop Zone ──
+const dropZone = document.getElementById('drop-zone');
+const fileInput = document.getElementById('file-input');
+
+dropZone.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropZone.classList.add('drag-over');
+});
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag-over');
+  const files = Array.from(e.dataTransfer.files);
+  files.forEach(f => loadFile(f));
+});
+fileInput.addEventListener('change', e => {
+  Array.from(e.target.files).forEach(f => loadFile(f));
+  e.target.value = '';
+});
+
+// ── Load File ──
+async function loadFile(file) {
+  const name = file.name.toLowerCase();
+  const ext = name.split('.').pop();
+
+  if (!['geojson','json','kml','gpx'].includes(ext)) {
+    Toast.error(`Unsupported format: .${ext}`);
+    return;
+  }
+
+  const text = await file.text();
+  let geojson;
+
+  try {
+    if (ext === 'geojson' || ext === 'json') {
+      geojson = JSON.parse(text);
+      validateGeoJSON(geojson);
+    } else if (ext === 'kml') {
+      geojson = kmlToGeoJSON(text);
+    } else if (ext === 'gpx') {
+      geojson = gpxToGeoJSON(text);
+    }
+  } catch (err) {
+    Toast.error(`Parse error: ${err.message}`);
+    return;
+  }
+
+  if (!geojson) { Toast.error('Failed to parse file'); return; }
+
+  // Normalise to FeatureCollection
+  if (geojson.type === 'Feature') geojson = { type:'FeatureCollection', features:[geojson] };
+  if (geojson.type !== 'FeatureCollection') {
+    Toast.error('Expected a GeoJSON FeatureCollection or Feature');
+    return;
+  }
+
+  const color = nextColor();
+  const layer = renderLayer(geojson, color);
+
+  loadedLayers.push({ name: file.name, geojson, color, layer, size: file.size, ext });
+  loadedGeoJSON = mergeFeatureCollections();
+
+  updateFileInfo(file, ext.toUpperCase());
+  updateStats(geojson);
+  updateFeatureList(geojson, color);
+  zoomToLayer(layer);
+
+  document.getElementById('btn-export-layer').disabled = false;
+  document.getElementById('btn-clear-map').disabled = false;
+  document.getElementById('props-card').style.display = 'block';
+
+  Toast.success(`Loaded: ${file.name} (${geojson.features.length} features)`);
+}
+
+// ── Render GeoJSON on map ──
+function renderLayer(geojson, color) {
+  const lyr = L.geoJSON(geojson, {
+    style: () => ({
+      color,
+      weight: 2,
+      fillColor: color,
+      fillOpacity: 0.15,
+      opacity: 0.9
+    }),
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+      radius: 6,
+      fillColor: color,
+      color: '#fff',
+      weight: 1.5,
+      opacity: 1,
+      fillOpacity: 0.9
+    }),
+    onEachFeature: (feature, layer) => {
+      layer.on('click', () => showFeatureProps(feature, color));
+      // Build popup
+      const props = feature.properties || {};
+      const name = props.name || props.Name || props.NAME || props.id || 'Feature';
+      const keys = Object.keys(props).slice(0, 6);
+      let popupHtml = `<div style="font-family:var(--font-mono);font-size:0.78rem;min-width:160px;">
+        <div style="color:${color};font-weight:700;margin-bottom:0.5rem;">${name}</div>`;
+      keys.forEach(k => {
+        popupHtml += `<div><span style="color:var(--text-muted)">${k}:</span> ${props[k]}</div>`;
+      });
+      if (Object.keys(props).length > 6) {
+        popupHtml += `<div style="color:var(--text-muted);margin-top:0.25rem;">+${Object.keys(props).length-6} more</div>`;
+      }
+      popupHtml += `</div>`;
+      layer.bindPopup(popupHtml, { maxWidth: 300 });
+    }
+  }).addTo(vmap);
+  return lyr;
+}
+
+// ── Zoom to layer ──
+function zoomToLayer(layer) {
+  try {
+    const bounds = layer.getBounds();
+    if (bounds.isValid()) {
+      vmap.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+    }
+  } catch {}
+}
+
+// ── Show feature properties ──
+function showFeatureProps(feature, color) {
+  const props = feature.properties || {};
+  const name = props.name || props.Name || feature.geometry?.type || 'Feature';
+  document.getElementById('selected-feat-name').textContent = name;
+
+  let html = '';
+  if (Object.keys(props).length === 0) {
+    html = `<div style="color:var(--text-muted)">No properties</div>`;
+  } else {
+    for (const [k, v] of Object.entries(props)) {
+      html += `<div><span class="prop-key">${k}</span>: <span class="prop-val">${v !== null && v !== undefined ? v : '—'}</span></div>`;
+    }
+    // Geometry info
+    html += `<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);">`;
+    html += `<div><span class="prop-key">geometry.type</span>: <span class="prop-val">${feature.geometry?.type || '—'}</span></div>`;
+    html += `</div>`;
+  }
+
+  document.getElementById('props-panel').innerHTML = html;
+}
+
+// ── File info panel ──
+function updateFileInfo(file, format) {
+  const sizeKB = (file.size / 1024).toFixed(1);
+  document.getElementById('file-format-badge').textContent = format;
+  document.getElementById('file-info-content').innerHTML = `
+    <div class="file-info-row"><span class="file-info-label">File Name</span><span class="file-info-value" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${file.name}</span></div>
+    <div class="file-info-row"><span class="file-info-label">Format</span><span class="file-info-value">${format}</span></div>
+    <div class="file-info-row"><span class="file-info-label">Size</span><span class="file-info-value">${sizeKB} KB</span></div>
+    <div class="file-info-row"><span class="file-info-label">Layers Loaded</span><span class="file-info-value">${loadedLayers.length}</span></div>
+  `;
+}
+
+// ── Geometry statistics ──
+function updateStats(geojson) {
+  const typeCounts = {};
+  let propCount = 0;
+  geojson.features.forEach(f => {
+    const t = f.geometry?.type || 'Unknown';
+    typeCounts[t] = (typeCounts[t]||0)+1;
+    propCount += Object.keys(f.properties||{}).length;
+  });
+
+  let statsHtml = '';
+  statsHtml += `<div class="file-info-row"><span class="file-info-label">Total Features</span><span class="file-info-value" style="color:var(--accent)">${geojson.features.length}</span></div>`;
+  for (const [type, count] of Object.entries(typeCounts)) {
+    statsHtml += `<div class="file-info-row"><span class="file-info-label">${type}</span><span class="file-info-value">${count}</span></div>`;
+  }
+  statsHtml += `<div class="file-info-row"><span class="file-info-label">Avg Properties</span><span class="file-info-value">${geojson.features.length ? (propCount/geojson.features.length).toFixed(1) : 0}</span></div>`;
+
+  // Bounding box
+  try {
+    let minLat=90, maxLat=-90, minLon=180, maxLon=-180;
+    geojson.features.forEach(f => {
+      if (!f.geometry) return;
+      const coords = flattenCoords(f.geometry);
+      coords.forEach(([lon,lat]) => {
+        if(lat<minLat)minLat=lat; if(lat>maxLat)maxLat=lat;
+        if(lon<minLon)minLon=lon; if(lon>maxLon)maxLon=lon;
+      });
+    });
+    if (minLat < 90) {
+      statsHtml += `<div class="file-info-row"><span class="file-info-label">Bbox (S,W)</span><span class="file-info-value mono">${minLat.toFixed(4)}, ${minLon.toFixed(4)}</span></div>`;
+      statsHtml += `<div class="file-info-row"><span class="file-info-label">Bbox (N,E)</span><span class="file-info-value mono">${maxLat.toFixed(4)}, ${maxLon.toFixed(4)}</span></div>`;
+    }
+  } catch {}
+
+  document.getElementById('stats-content').innerHTML = statsHtml;
+}
+
+// ── Feature list ──
+function updateFeatureList(geojson, color) {
+  const container = document.getElementById('feature-list');
+  document.getElementById('feat-count-badge').textContent = geojson.features.length;
+
+  if (geojson.features.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding:1rem;"><div class="empty-text" style="font-size:0.78rem;">No features</div></div>`;
+    return;
+  }
+
+  const MAX = 100;
+  let html = '';
+  const sliced = geojson.features.slice(0, MAX);
+  sliced.forEach((f, i) => {
+    const props = f.properties || {};
+    const name = props.name || props.Name || props.NAME || props.id || props.ID || `Feature ${i+1}`;
+    const type = f.geometry?.type || '?';
+    html += `<div class="feat-row" onclick="showFeatureProps(${JSON.stringify(f).replace(/"/g, '&quot;')}, '${color}')">
+      <div class="feat-dot" style="background:${color}"></div>
+      <div class="feat-name">${name}</div>
+      <div class="feat-type">${type}</div>
+    </div>`;
+  });
+  if (geojson.features.length > MAX) {
+    html += `<div style="text-align:center;padding:0.5rem;font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">+${geojson.features.length - MAX} more features</div>`;
+  }
+  container.innerHTML = html;
+}
+
+// Click feature from list - need to handle escaped JSON
+function showFeatureProps(feature, color) {
+  if (typeof feature === 'string') {
+    try { feature = JSON.parse(feature); } catch { return; }
+  }
+  const props = feature.properties || {};
+  const name = props.name || props.Name || feature.geometry?.type || 'Feature';
+  document.getElementById('selected-feat-name').textContent = name;
+  let html = '';
+  if (Object.keys(props).length === 0) {
+    html = `<div style="color:var(--text-muted)">No properties</div>`;
+  } else {
+    for (const [k, v] of Object.entries(props)) {
+      html += `<div><span class="prop-key">${k}</span>: <span class="prop-val">${v !== null ? v : '—'}</span></div>`;
+    }
+    html += `<div style="margin-top:0.5rem;padding-top:0.5rem;border-top:1px solid var(--border);">`;
+    html += `<div><span class="prop-key">geometry.type</span>: <span class="prop-val">${feature.geometry?.type||'—'}</span></div>`;
+    html += `</div>`;
+  }
+  document.getElementById('props-panel').innerHTML = html;
+  document.getElementById('props-card').style.display = 'block';
+}
+
+// ── Merge all feature collections ──
+function mergeFeatureCollections() {
+  const all = [];
+  loadedLayers.forEach(l => all.push(...l.geojson.features));
+  return { type:'FeatureCollection', features: all };
+}
+
+// ── Clear Map ──
+document.getElementById('btn-clear-map').addEventListener('click', () => {
+  loadedLayers.forEach(l => vmap.removeLayer(l.layer));
+  loadedLayers = [];
+  loadedGeoJSON = null;
+  colorIdx = 0;
+  document.getElementById('file-info-content').innerHTML = `<div class="empty-state" style="padding:1.5rem 1rem;"><div class="empty-text" style="font-size:0.78rem;">No file loaded</div></div>`;
+  document.getElementById('stats-content').innerHTML = `<div class="empty-state" style="padding:1.5rem 1rem;"><div class="empty-text" style="font-size:0.78rem;">Load a file to see statistics</div></div>`;
+  document.getElementById('feature-list').innerHTML = `<div class="empty-state" style="padding:1.5rem 1rem;"><div class="empty-text" style="font-size:0.78rem;">No features loaded</div></div>`;
+  document.getElementById('feat-count-badge').textContent = '0';
+  document.getElementById('file-format-badge').textContent = '';
+  document.getElementById('props-panel').innerHTML = `<div style="color:var(--text-muted);font-size:0.78rem;">Click a feature to inspect properties</div>`;
+  document.getElementById('btn-export-layer').disabled = true;
+  document.getElementById('btn-clear-map').disabled = true;
+  Toast.info('Map cleared');
+});
+
+// ── Export ──
+document.getElementById('btn-export-layer').addEventListener('click', () => {
+  if (!loadedGeoJSON) { Toast.warning('No data loaded'); return; }
+  exportGeoJSON(loadedGeoJSON, `geocart-export-${Date.now()}.geojson`);
+});
+
+// ── Coordinate Helpers ──
+function flattenCoords(geometry) {
+  const { type, coordinates } = geometry;
+  if (type === 'Point') return [coordinates];
+  if (type === 'LineString' || type === 'MultiPoint') return coordinates;
+  if (type === 'Polygon' || type === 'MultiLineString') return coordinates.flat();
+  if (type === 'MultiPolygon') return coordinates.flat(2);
+  return [];
+}
+
+// ── GeoJSON Validation ──
+function validateGeoJSON(geo) {
+  if (!geo || !geo.type) throw new Error('Missing type field');
+  const validTypes = ['FeatureCollection','Feature','Point','LineString','Polygon','MultiPoint','MultiLineString','MultiPolygon','GeometryCollection'];
+  if (!validTypes.includes(geo.type)) throw new Error(`Invalid GeoJSON type: ${geo.type}`);
+}
+
+// ── KML to GeoJSON ──
+function kmlToGeoJSON(kmlText) {
+  const parser = new DOMParser();
+  const kml = parser.parseFromString(kmlText, 'text/xml');
+  const features = [];
+
+  // Helper: get coord string → array
+  const parseCoords = (str) => {
+    if (!str) return null;
+    return str.trim().split(/\s+/).map(c => {
+      const parts = c.split(',').map(Number);
+      return parts.length >= 2 ? [parts[0], parts[1]] : null;
+    }).filter(Boolean);
+  };
+
+  const placemarks = kml.querySelectorAll('Placemark');
+  placemarks.forEach(pm => {
+    const name = pm.querySelector('name')?.textContent?.trim() || '';
+    const desc = pm.querySelector('description')?.textContent?.trim() || '';
+    const props = { name, description: desc };
+
+    // Extended data
+    pm.querySelectorAll('SimpleData').forEach(sd => {
+      props[sd.getAttribute('name')] = sd.textContent?.trim();
+    });
+
+    let geometry = null;
+
+    const point = pm.querySelector('Point coordinates');
+    if (point) {
+      const coords = parseCoords(point.textContent)?.[0];
+      if (coords) geometry = { type:'Point', coordinates: coords };
+    }
+
+    const line = pm.querySelector('LineString coordinates');
+    if (line) {
+      const coords = parseCoords(line.textContent);
+      if (coords) geometry = { type:'LineString', coordinates: coords };
+    }
+
+    const polygon = pm.querySelector('Polygon outerBoundaryIs LinearRing coordinates');
+    if (polygon) {
+      const coords = parseCoords(polygon.textContent);
+      if (coords) geometry = { type:'Polygon', coordinates: [coords] };
+    }
+
+    if (geometry) {
+      features.push({ type:'Feature', properties: props, geometry });
+    }
+  });
+
+  if (features.length === 0) throw new Error('No features found in KML');
+  return { type:'FeatureCollection', features };
+}
+
+// ── GPX to GeoJSON ──
+function gpxToGeoJSON(gpxText) {
+  const parser = new DOMParser();
+  const gpx = parser.parseFromString(gpxText, 'text/xml');
+  const features = [];
+
+  // Waypoints
+  gpx.querySelectorAll('wpt').forEach(wpt => {
+    const lat = parseFloat(wpt.getAttribute('lat'));
+    const lon = parseFloat(wpt.getAttribute('lon'));
+    const name = wpt.querySelector('name')?.textContent || 'Waypoint';
+    features.push({ type:'Feature', properties:{ name }, geometry:{ type:'Point', coordinates:[lon,lat] } });
+  });
+
+  // Tracks
+  gpx.querySelectorAll('trk').forEach(trk => {
+    const name = trk.querySelector('name')?.textContent || 'Track';
+    const coords = [];
+    trk.querySelectorAll('trkpt').forEach(pt => {
+      const lat = parseFloat(pt.getAttribute('lat'));
+      const lon = parseFloat(pt.getAttribute('lon'));
+      coords.push([lon, lat]);
+    });
+    if (coords.length > 0) {
+      features.push({ type:'Feature', properties:{ name }, geometry:{ type:'LineString', coordinates: coords } });
+    }
+  });
+
+  // Routes
+  gpx.querySelectorAll('rte').forEach(rte => {
+    const name = rte.querySelector('name')?.textContent || 'Route';
+    const coords = [];
+    rte.querySelectorAll('rtept').forEach(pt => {
+      const lat = parseFloat(pt.getAttribute('lat'));
+      const lon = parseFloat(pt.getAttribute('lon'));
+      coords.push([lon, lat]);
+    });
+    if (coords.length > 0) {
+      features.push({ type:'Feature', properties:{ name }, geometry:{ type:'LineString', coordinates: coords } });
+    }
+  });
+
+  if (features.length === 0) throw new Error('No features found in GPX');
+  return { type:'FeatureCollection', features };
+}
+
+// Make showFeatureProps accessible in onclick attrs
+window.showFeatureProps = showFeatureProps;
+</script>
+</body>
+</html>

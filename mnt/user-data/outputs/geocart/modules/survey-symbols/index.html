@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Survey Symbol Reference — GeoCart Spatial Toolkit</title>
+  <link rel="icon" type="image/svg+xml" href="../../assets/icons/favicon.svg" />
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <style>
+    .symbols-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 1.5rem;
+      padding-bottom: 3rem;
+      min-height: 70vh;
+    }
+    /* Category sidebar */
+    .cat-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      position: sticky;
+      top: calc(var(--nav-height) + 1rem);
+      align-self: start;
+      max-height: calc(100vh - var(--nav-height) - 2rem);
+      overflow-y: auto;
+    }
+    .cat-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.65rem 0.9rem;
+      border-radius: var(--radius);
+      border: 1px solid transparent;
+      background: none;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+      width: 100%;
+    }
+    .cat-btn:hover { background: var(--bg-card); border-color: var(--border); color: var(--text-primary); }
+    .cat-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .cat-btn .cat-icon { font-size: 1.05rem; width: 20px; text-align: center; flex-shrink: 0; }
+    .cat-count {
+      margin-left: auto;
+      font-size: 0.65rem;
+      background: var(--bg-active);
+      border-radius: 10px;
+      padding: 0.1rem 0.4rem;
+      color: var(--text-muted);
+    }
+
+    /* Symbol grid */
+    .symbols-content {}
+    .search-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    .search-bar-row .search-wrapper { flex: 1; min-width: 200px; }
+
+    .category-section {
+      margin-bottom: 2.5rem;
+    }
+    .cat-section-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .cat-section-title {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-primary);
+    }
+    .cat-section-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .symbol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 0.75rem;
+    }
+    .symbol-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+      position: relative;
+    }
+    .symbol-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+    .symbol-card.hidden { display: none; }
+    .symbol-svg-wrap {
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .symbol-svg-wrap svg { width: 100%; height: 100%; }
+    .symbol-name {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+    .symbol-code {
+      font-family: var(--font-mono);
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      background: var(--bg-active);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+    }
+    .symbol-detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 2000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .symbol-detail-overlay.active { display: flex; }
+    .symbol-detail-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      padding: 2rem;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .symbol-detail-svg {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 1.5rem;
+    }
+    .symbol-detail-name {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+    .symbol-detail-cat {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--accent);
+      margin-bottom: 1rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .symbol-detail-desc {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 1rem;
+    }
+    .symbol-detail-meta {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .symbols-layout { grid-template-columns: 1fr; }
+      .cat-sidebar { position: static; max-height: none; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
+      .cat-btn { width: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <svg class="nav-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="var(--accent-dim)"/>
+      <circle cx="32" cy="32" r="16" stroke="var(--accent)" stroke-width="2" fill="none"/>
+      <circle cx="32" cy="32" r="5" fill="var(--accent)"/>
+      <line x1="32" y1="12" x2="32" y2="22" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="32" y1="42" x2="32" y2="52" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="12" y1="32" x2="22" y2="32" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="42" y1="32" x2="52" y2="32" stroke="var(--accent)" stroke-width="2"/>
+    </svg>
+    <span class="nav-title">GeoCart <span>Spatial Toolkit</span></span>
+  </div>
+  <div class="nav-actions">
+    <a href="../../index.html" class="nav-back">← Dashboard</a>
+    <button class="theme-toggle" title="Toggle theme">☀</button>
+  </div>
+</nav>
+
+<main class="page-wrapper">
+  <div class="container">
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-tag">Module 04</div>
+          <h1 class="page-title">Survey Symbol Reference</h1>
+          <p class="page-subtitle">GIS and cartographic symbol library. Click any symbol to view details.</p>
+        </div>
+        <div id="symbol-count-badge" class="badge badge-info"></div>
+      </div>
+    </div>
+
+    <div class="symbols-layout">
+      <!-- Category Sidebar -->
+      <div class="cat-sidebar">
+        <button class="cat-btn active" data-cat="all">
+          <span class="cat-icon">⊕</span> All Symbols
+          <span class="cat-count" id="cnt-all">0</span>
+        </button>
+        <button class="cat-btn" data-cat="roads">
+          <span class="cat-icon">═</span> Roads
+          <span class="cat-count" id="cnt-roads">0</span>
+        </button>
+        <button class="cat-btn" data-cat="buildings">
+          <span class="cat-icon">⬜</span> Buildings
+          <span class="cat-count" id="cnt-buildings">0</span>
+        </button>
+        <button class="cat-btn" data-cat="vegetation">
+          <span class="cat-icon">⬡</span> Vegetation
+          <span class="cat-count" id="cnt-vegetation">0</span>
+        </button>
+        <button class="cat-btn" data-cat="water">
+          <span class="cat-icon">≈</span> Water
+          <span class="cat-count" id="cnt-water">0</span>
+        </button>
+        <button class="cat-btn" data-cat="boundaries">
+          <span class="cat-icon">┄</span> Boundaries
+          <span class="cat-count" id="cnt-boundaries">0</span>
+        </button>
+        <button class="cat-btn" data-cat="utilities">
+          <span class="cat-icon">⊞</span> Utilities
+          <span class="cat-count" id="cnt-utilities">0</span>
+        </button>
+        <button class="cat-btn" data-cat="aviation">
+          <span class="cat-icon">✈</span> Aviation
+          <span class="cat-count" id="cnt-aviation">0</span>
+        </button>
+        <button class="cat-btn" data-cat="control">
+          <span class="cat-icon">◉</span> Survey Control
+          <span class="cat-count" id="cnt-control">0</span>
+        </button>
+      </div>
+
+      <!-- Main content -->
+      <div class="symbols-content">
+        <div class="search-bar-row">
+          <div class="search-wrapper">
+            <span class="search-icon">⊕</span>
+            <input type="text" id="symbol-search" class="form-control" placeholder="Search symbols..." />
+          </div>
+          <span id="visible-count" style="font-family:var(--font-mono);font-size:0.75rem;color:var(--text-muted);"></span>
+        </div>
+        <div id="symbols-container"></div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Symbol Detail Overlay -->
+<div class="symbol-detail-overlay" id="symbol-detail-overlay" onclick="closeDetail(event)">
+  <div class="symbol-detail-card" id="symbol-detail-card">
+    <div class="symbol-detail-svg" id="detail-svg"></div>
+    <div class="symbol-detail-name" id="detail-name"></div>
+    <div class="symbol-detail-cat" id="detail-cat"></div>
+    <div class="symbol-detail-desc" id="detail-desc"></div>
+    <div class="symbol-detail-meta" id="detail-meta"></div>
+    <button class="btn btn-secondary btn-sm" style="margin-top:1rem;" onclick="closeDetail()">Close</button>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../../assets/js/app.js"></script>
+<script>
+/* ============================================================
+   Survey Symbol Reference — SVG Symbol Library
+   ============================================================ */
+
+// ── Symbol Data ──────────────────────────────────────────────
+// Each symbol has: id, name, category, code, description, usage, svg (inline SVG string)
+const SYMBOLS = [
+
+  // ── ROADS ────────────────────────────────────────────────
+  { id:'r01', name:'Primary Road', category:'roads', code:'RD-PRI',
+    description:'Major paved highway or dual carriageway. Typically shown in bold red or orange on topographic maps.',
+    usage:'National highways, A-class roads',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="20" width="40" height="12" rx="2" fill="#e05020" opacity="0.9"/>
+      <line x1="26" y1="20" x2="26" y2="32" stroke="white" stroke-width="1.5" stroke-dasharray="3 3"/>
+    </svg>` },
+
+  { id:'r02', name:'Secondary Road', category:'roads', code:'RD-SEC',
+    description:'Paved minor road connecting towns and settlements. Shown in yellow or lighter weight.',
+    usage:'B-class and county roads',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="22" width="40" height="8" rx="1" fill="#d4a017" opacity="0.9"/>
+      <line x1="26" y1="22" x2="26" y2="30" stroke="white" stroke-width="1" stroke-dasharray="2 3"/>
+    </svg>` },
+
+  { id:'r03', name:'Unpaved Track', category:'roads', code:'RD-TRK',
+    description:'Unsurfaced track or murram road. Shown as parallel dashed lines.',
+    usage:'Farm tracks, bush roads, seasonal routes',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="22" x2="46" y2="22" stroke="#8a6a30" stroke-width="2" stroke-dasharray="5 3"/>
+      <line x1="6" y1="30" x2="46" y2="30" stroke="#8a6a30" stroke-width="2" stroke-dasharray="5 3"/>
+    </svg>` },
+
+  { id:'r04', name:'Footpath / Trail', category:'roads', code:'RD-FTH',
+    description:'Pedestrian footpath or hiking trail. Single dashed line.',
+    usage:'Pedestrian routes, survey access paths',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#8a6a30" stroke-width="1.5" stroke-dasharray="4 4"/>
+    </svg>` },
+
+  { id:'r05', name:'Road Bridge', category:'roads', code:'RD-BRG',
+    description:'Road crossing a water body via a bridge structure.',
+    usage:'River crossings, overpasses',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="22" width="40" height="8" fill="#e05020" rx="1"/>
+      <rect x="6" y="20" width="6" height="12" fill="#666"/>
+      <rect x="40" y="20" width="6" height="12" fill="#666"/>
+      <path d="M12 26 Q26 16 40 26" stroke="#aaa" stroke-width="1.5" fill="none"/>
+    </svg>` },
+
+  { id:'r06', name:'Railway Line', category:'roads', code:'RY-LN',
+    description:'Single or double track railway. Standard crosshatch pattern on base line.',
+    usage:'SGR, metre-gauge railway lines',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#555" stroke-width="3"/>
+      <line x1="12" y1="22" x2="12" y2="30" stroke="#555" stroke-width="1.5"/>
+      <line x1="22" y1="22" x2="22" y2="30" stroke="#555" stroke-width="1.5"/>
+      <line x1="32" y1="22" x2="32" y2="30" stroke="#555" stroke-width="1.5"/>
+      <line x1="42" y1="22" x2="42" y2="30" stroke="#555" stroke-width="1.5"/>
+    </svg>` },
+
+  // ── BUILDINGS ──────────────────────────────────────────────
+  { id:'b01', name:'General Building', category:'buildings', code:'BLD-GEN',
+    description:'Standard building outline filled with grey. Used for most structures.',
+    usage:'Houses, offices, commercial buildings',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="16" width="32" height="24" fill="#aaa" stroke="#555" stroke-width="1.5" rx="1"/>
+      <polygon points="10,16 26,6 42,16" fill="#888" stroke="#555" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'b02', name:'Church / Religious', category:'buildings', code:'BLD-CHR',
+    description:'Place of worship. Cross symbol on building footprint.',
+    usage:'Churches, mosques, temples',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="14" y="22" width="24" height="18" fill="#ccc" stroke="#555" stroke-width="1.5"/>
+      <rect x="24" y="10" width="4" height="16" fill="#ccc" stroke="#555" stroke-width="1.5"/>
+      <rect x="18" y="15" width="16" height="4" fill="#ccc" stroke="#555" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'b03', name:'Hospital / Medical', category:'buildings', code:'BLD-HOS',
+    description:'Medical facility. Red cross symbol.',
+    usage:'Hospitals, dispensaries, health centres',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="14" width="32" height="24" fill="#fff" stroke="#cc0000" stroke-width="2"/>
+      <rect x="24" y="16" width="4" height="20" fill="#cc0000"/>
+      <rect x="16" y="24" width="20" height="4" fill="#cc0000"/>
+    </svg>` },
+
+  { id:'b04', name:'School', category:'buildings', code:'BLD-SCH',
+    description:'Educational institution. Flag symbol on building.',
+    usage:'Primary, secondary schools and universities',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="24" width="32" height="18" fill="#d4a017" stroke="#a07010" stroke-width="1.5"/>
+      <line x1="26" y1="10" x2="26" y2="26" stroke="#555" stroke-width="1.5"/>
+      <polygon points="26,10 40,16 26,22" fill="#cc0000"/>
+    </svg>` },
+
+  { id:'b05', name:'Industrial Building', category:'buildings', code:'BLD-IND',
+    description:'Factory or industrial plant. Hatched fill pattern.',
+    usage:'Factories, warehouses, processing plants',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="18" width="36" height="22" fill="none" stroke="#555" stroke-width="1.5"/>
+      <line x1="8" y1="18" x2="44" y2="40" stroke="#999" stroke-width="0.8"/>
+      <line x1="8" y1="26" x2="36" y2="40" stroke="#999" stroke-width="0.8"/>
+      <line x1="16" y1="18" x2="44" y2="32" stroke="#999" stroke-width="0.8"/>
+      <rect x="18" y="28" width="10" height="12" fill="#aaa" stroke="#555" stroke-width="1"/>
+      <rect x="36" y="12" width="4" height="8" fill="#888" stroke="#555" stroke-width="1"/>
+    </svg>` },
+
+  { id:'b06', name:'Water Tower', category:'buildings', code:'BLD-WTR',
+    description:'Elevated water storage structure. Circle on pedestal.',
+    usage:'Municipal water supply infrastructure',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="18" rx="12" ry="8" fill="#3d7fff" stroke="#2255aa" stroke-width="1.5"/>
+      <rect x="22" y="26" width="8" height="14" fill="#aaa" stroke="#555" stroke-width="1.5"/>
+      <line x1="14" y1="40" x2="22" y2="26" stroke="#555" stroke-width="1.2"/>
+      <line x1="38" y1="40" x2="30" y2="26" stroke="#555" stroke-width="1.2"/>
+    </svg>` },
+
+  // ── VEGETATION ─────────────────────────────────────────────
+  { id:'v01', name:'Dense Forest', category:'vegetation', code:'VEG-FOR',
+    description:'Closed canopy woodland or forest. Green fill with tree symbols.',
+    usage:'Natural forest areas, gazetted forests',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="14" cy="28" rx="8" ry="10" fill="#2d7a2d" opacity="0.8"/>
+      <ellipse cx="26" cy="24" rx="9" ry="12" fill="#3a9a3a" opacity="0.8"/>
+      <ellipse cx="38" cy="28" rx="8" ry="10" fill="#2d7a2d" opacity="0.8"/>
+      <line x1="14" y1="38" x2="14" y2="44" stroke="#5a3010" stroke-width="2"/>
+      <line x1="26" y1="36" x2="26" y2="44" stroke="#5a3010" stroke-width="2"/>
+      <line x1="38" y1="38" x2="38" y2="44" stroke="#5a3010" stroke-width="2"/>
+    </svg>` },
+
+  { id:'v02', name:'Scrub / Bushland', category:'vegetation', code:'VEG-SCR',
+    description:'Open scrubland with scattered low bushes.',
+    usage:'Semi-arid areas, degraded forest margins',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="32" r="5" fill="#7ab020" opacity="0.8"/>
+      <circle cx="26" cy="28" r="6" fill="#8ac030" opacity="0.8"/>
+      <circle cx="40" cy="32" r="5" fill="#7ab020" opacity="0.8"/>
+      <circle cx="19" cy="36" r="4" fill="#6aa018" opacity="0.7"/>
+      <circle cx="34" cy="36" r="4" fill="#6aa018" opacity="0.7"/>
+    </svg>` },
+
+  { id:'v03', name:'Grassland / Savanna', category:'vegetation', code:'VEG-GRS',
+    description:'Open grassland or savanna. Grass tick symbols on light green.',
+    usage:'Pastures, rangeland, game parks',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="4" width="44" height="44" fill="#c8e0a0" opacity="0.3" rx="2"/>
+      <line x1="10" y1="36" x2="10" y2="26" stroke="#6a9820" stroke-width="1.5"/>
+      <line x1="10" y1="26" x2="7" y2="20" stroke="#6a9820" stroke-width="1.2"/>
+      <line x1="10" y1="28" x2="13" y2="22" stroke="#6a9820" stroke-width="1.2"/>
+      <line x1="22" y1="38" x2="22" y2="28" stroke="#6a9820" stroke-width="1.5"/>
+      <line x1="22" y1="28" x2="19" y2="22" stroke="#6a9820" stroke-width="1.2"/>
+      <line x1="22" y1="30" x2="25" y2="24" stroke="#6a9820" stroke-width="1.2"/>
+      <line x1="34" y1="36" x2="34" y2="26" stroke="#6a9820" stroke-width="1.5"/>
+      <line x1="34" y1="26" x2="31" y2="20" stroke="#6a9820" stroke-width="1.2"/>
+      <line x1="34" y1="28" x2="37" y2="22" stroke="#6a9820" stroke-width="1.2"/>
+    </svg>` },
+
+  { id:'v04', name:'Mangrove', category:'vegetation', code:'VEG-MNG',
+    description:'Coastal mangrove forest. Stippled green over blue tint.',
+    usage:'Coastal estuaries, tidal zones (Mombasa coast)',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="32" rx="20" ry="12" fill="#7ab8c0" opacity="0.3"/>
+      <ellipse cx="14" cy="26" rx="7" ry="9" fill="#2d7a5a" opacity="0.85"/>
+      <ellipse cx="26" cy="22" rx="8" ry="10" fill="#3a8a6a" opacity="0.85"/>
+      <ellipse cx="38" cy="26" rx="7" ry="9" fill="#2d7a5a" opacity="0.85"/>
+      <line x1="14" y1="35" x2="12" y2="42" stroke="#5a3010" stroke-width="1.2"/>
+      <line x1="14" y1="35" x2="16" y2="42" stroke="#5a3010" stroke-width="1.2"/>
+      <line x1="26" y1="32" x2="26" y2="42" stroke="#5a3010" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'v05', name:'Cultivated Land', category:'vegetation', code:'VEG-CUL',
+    description:'Agricultural crop land. Row pattern indicating cultivation.',
+    usage:'Farms, smallholdings, irrigation schemes',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="10" width="40" height="32" fill="#d4e8a0" opacity="0.5" rx="2"/>
+      <line x1="6" y1="18" x2="46" y2="18" stroke="#8aaa40" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#8aaa40" stroke-width="1" stroke-dasharray="3 2"/>
+      <line x1="6" y1="34" x2="46" y2="34" stroke="#8aaa40" stroke-width="1" stroke-dasharray="3 2"/>
+    </svg>` },
+
+  // ── WATER ─────────────────────────────────────────────────
+  { id:'w01', name:'Perennial River', category:'water', code:'WTR-RIV',
+    description:'River flowing year-round. Solid blue line, wider at mouth.',
+    usage:'Major rivers: Tana, Athi, Galana, Ewaso Ng\'iro',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 26 Q16 18 26 26 Q36 34 46 26" stroke="#3d7fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+    </svg>` },
+
+  { id:'w02', name:'Seasonal Stream', category:'water', code:'WTR-SEA',
+    description:'Intermittent stream active during rains. Dashed blue line.',
+    usage:'Seasonal streams, luggas, dry riverbeds',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 26 Q16 18 26 26 Q36 34 46 26" stroke="#3d7fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-dasharray="5 4"/>
+    </svg>` },
+
+  { id:'w03', name:'Lake / Reservoir', category:'water', code:'WTR-LKE',
+    description:'Standing water body. Solid blue fill with shoreline.',
+    usage:'Lakes Naivasha, Nakuru, Baringo, dams',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="28" rx="20" ry="14" fill="#3d7fff" opacity="0.6"/>
+      <ellipse cx="26" cy="28" rx="20" ry="14" fill="none" stroke="#2255aa" stroke-width="1.5"/>
+      <path d="M10 26 Q20 22 30 26 Q36 28 42 25" stroke="white" stroke-width="0.8" fill="none" opacity="0.4"/>
+    </svg>` },
+
+  { id:'w04', name:'Marsh / Swamp', category:'water', code:'WTR-SWP',
+    description:'Wetland area. Horizontal lines with vegetation marks.',
+    usage:'Papyrus swamps, flood plains',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="6" y="20" width="40" height="20" fill="#7ab8c0" opacity="0.25"/>
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#3d7fff" stroke-width="0.8"/>
+      <line x1="6" y1="32" x2="46" y2="32" stroke="#3d7fff" stroke-width="0.8"/>
+      <line x1="14" y1="20" x2="14" y2="14" stroke="#3a8a6a" stroke-width="1.5"/>
+      <line x1="14" y1="14" x2="10" y2="10" stroke="#3a8a6a" stroke-width="1.2"/>
+      <line x1="14" y1="14" x2="18" y2="10" stroke="#3a8a6a" stroke-width="1.2"/>
+      <line x1="26" y1="20" x2="26" y2="12" stroke="#3a8a6a" stroke-width="1.5"/>
+      <line x1="26" y1="12" x2="22" y2="8"  stroke="#3a8a6a" stroke-width="1.2"/>
+      <line x1="26" y1="12" x2="30" y2="8"  stroke="#3a8a6a" stroke-width="1.2"/>
+      <line x1="38" y1="20" x2="38" y2="14" stroke="#3a8a6a" stroke-width="1.5"/>
+      <line x1="38" y1="14" x2="34" y2="10" stroke="#3a8a6a" stroke-width="1.2"/>
+      <line x1="38" y1="14" x2="42" y2="10" stroke="#3a8a6a" stroke-width="1.2"/>
+    </svg>` },
+
+  { id:'w05', name:'Water Well / Borehole', category:'water', code:'WTR-WLL',
+    description:'Point water source. Circle with dot and pump symbol.',
+    usage:'Community boreholes, hand-dug wells',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="28" r="10" fill="none" stroke="#3d7fff" stroke-width="2"/>
+      <circle cx="26" cy="28" r="3" fill="#3d7fff"/>
+      <rect x="18" y="12" width="16" height="6" rx="1" fill="#888" stroke="#555" stroke-width="1"/>
+      <line x1="26" y1="18" x2="26" y2="18" stroke="#555" stroke-width="1.5"/>
+      <line x1="22" y1="18" x2="22" y2="24" stroke="#555" stroke-width="1.5"/>
+      <line x1="30" y1="18" x2="30" y2="24" stroke="#555" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'w06', name:'Dam / Weir', category:'water', code:'WTR-DAM',
+    description:'Water retention structure across a watercourse.',
+    usage:'Hydroelectric dams, irrigation weirs',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="26" cy="32" rx="18" ry="10" fill="#3d7fff" opacity="0.5"/>
+      <rect x="10" y="24" width="32" height="8" fill="#888" stroke="#555" stroke-width="1.5"/>
+      <line x1="10" y1="28" x2="42" y2="28" stroke="#555" stroke-width="1"/>
+    </svg>` },
+
+  // ── BOUNDARIES ────────────────────────────────────────────
+  { id:'bd01', name:'International Boundary', category:'boundaries', code:'BND-INT',
+    description:'National border between countries. Bold line with alternating dots and dashes.',
+    usage:'Kenya–Tanzania, Kenya–Uganda borders',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#cc0000" stroke-width="3" stroke-dasharray="8 3 2 3"/>
+    </svg>` },
+
+  { id:'bd02', name:'County Boundary', category:'boundaries', code:'BND-CNT',
+    description:'Kenya county administrative boundary. Medium weight dashed line.',
+    usage:'47 county boundaries',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#9b59b6" stroke-width="2" stroke-dasharray="6 4"/>
+    </svg>` },
+
+  { id:'bd03', name:'Sub-County Boundary', category:'boundaries', code:'BND-SUB',
+    description:'Sub-county administrative boundary.',
+    usage:'Sub-county and ward boundaries',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#9b59b6" stroke-width="1.5" stroke-dasharray="4 4"/>
+    </svg>` },
+
+  { id:'bd04', name:'Land Parcel Boundary', category:'boundaries', code:'BND-PRO',
+    description:'Property or cadastral boundary. Thin solid line.',
+    usage:'Title deed boundaries, survey blocks',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="14" width="36" height="24" fill="none" stroke="#f0a030" stroke-width="1.5"/>
+      <line x1="26" y1="14" x2="26" y2="38" stroke="#f0a030" stroke-width="1"/>
+      <line x1="8" y1="26" x2="44" y2="26" stroke="#f0a030" stroke-width="1"/>
+    </svg>` },
+
+  { id:'bd05', name:'Forest / Reserve Boundary', category:'boundaries', code:'BND-FOR',
+    description:'Protected area or gazetted forest boundary.',
+    usage:'National parks, game reserves, forest reserves',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="8" y="14" width="36" height="24" fill="rgba(45,122,45,0.1)" stroke="#2d7a2d" stroke-width="2" stroke-dasharray="6 3"/>
+    </svg>` },
+
+  // ── UTILITIES ─────────────────────────────────────────────
+  { id:'u01', name:'Power Transmission Line', category:'utilities', code:'UTL-POW',
+    description:'High voltage electricity transmission line. Pylon symbol on line.',
+    usage:'KETRACO grid lines, 132kV and above',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#e0a000" stroke-width="1.5"/>
+      <line x1="16" y1="18" x2="16" y2="34" stroke="#888" stroke-width="1.5"/>
+      <line x1="11" y1="22" x2="21" y2="22" stroke="#888" stroke-width="1.5"/>
+      <line x1="12" y1="28" x2="20" y2="28" stroke="#888" stroke-width="1.5"/>
+      <line x1="36" y1="18" x2="36" y2="34" stroke="#888" stroke-width="1.5"/>
+      <line x1="31" y1="22" x2="41" y2="22" stroke="#888" stroke-width="1.5"/>
+      <line x1="32" y1="28" x2="40" y2="28" stroke="#888" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'u02', name:'Underground Pipeline', category:'utilities', code:'UTL-PIP',
+    description:'Buried pipeline. Dashed line with pipe direction arrows.',
+    usage:'Water mains, oil/gas pipelines, sewers',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#888" stroke-width="3" stroke-dasharray="8 3"/>
+      <text x="20" y="22" font-size="8" fill="#888" font-family="monospace">P</text>
+      <text x="30" y="22" font-size="8" fill="#888" font-family="monospace">P</text>
+    </svg>` },
+
+  { id:'u03', name:'Water Main', category:'utilities', code:'UTL-WTR',
+    description:'Municipal water supply main pipe.',
+    usage:'NCWSC, county water supply mains',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="6" y1="26" x2="46" y2="26" stroke="#3d7fff" stroke-width="3" stroke-dasharray="8 3"/>
+      <circle cx="16" cy="26" r="3" fill="#3d7fff" opacity="0.6"/>
+      <circle cx="36" cy="26" r="3" fill="#3d7fff" opacity="0.6"/>
+    </svg>` },
+
+  { id:'u04', name:'Mobile Tower / Mast', category:'utilities', code:'UTL-MST',
+    description:'Telecommunications tower or mast.',
+    usage:'Mobile network towers, broadcast masts',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <line x1="26" y1="8" x2="26" y2="44" stroke="#888" stroke-width="2"/>
+      <line x1="14" y1="18" x2="38" y2="18" stroke="#888" stroke-width="1.5"/>
+      <line x1="18" y1="28" x2="34" y2="28" stroke="#888" stroke-width="1.5"/>
+      <line x1="22" y1="36" x2="30" y2="36" stroke="#888" stroke-width="1.5"/>
+      <line x1="14" y1="18" x2="26" y2="8" stroke="#666" stroke-width="1"/>
+      <line x1="38" y1="18" x2="26" y2="8" stroke="#666" stroke-width="1"/>
+      <circle cx="26" cy="8" r="2" fill="#e05020"/>
+    </svg>` },
+
+  // ── AVIATION ──────────────────────────────────────────────
+  { id:'av01', name:'Airport / Aerodrome', category:'aviation', code:'AVN-APT',
+    description:'Certificated aerodrome or airport. Winged circle symbol.',
+    usage:'JKIA, Wilson Airport, Kisumu Airport',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="26" r="14" fill="none" stroke="#3d7fff" stroke-width="1.5"/>
+      <line x1="26" y1="12" x2="26" y2="40" stroke="#3d7fff" stroke-width="2"/>
+      <line x1="12" y1="26" x2="40" y2="26" stroke="#3d7fff" stroke-width="2"/>
+      <path d="M26 26 l-8-4 l0 2 l8 2 l8-2 l0-2 z" fill="#3d7fff"/>
+    </svg>` },
+
+  { id:'av02', name:'Airstrip / Grass Strip', category:'aviation', code:'AVN-STR',
+    description:'Unpaved or grass airstrip. Rectangle with runway markings.',
+    usage:'Bush airstrips, remote landing zones',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="10" y="20" width="32" height="12" fill="#c8e0a0" stroke="#6a9820" stroke-width="1.5"/>
+      <line x1="26" y1="20" x2="26" y2="32" stroke="#6a9820" stroke-width="1" stroke-dasharray="3 3"/>
+      <line x1="14" y1="20" x2="14" y2="32" stroke="#6a9820" stroke-width="0.8"/>
+      <line x1="38" y1="20" x2="38" y2="32" stroke="#6a9820" stroke-width="0.8"/>
+    </svg>` },
+
+  { id:'av03', name:'Helipad', category:'aviation', code:'AVN-HEL',
+    description:'Helicopter landing pad. H symbol in circle.',
+    usage:'Hospital helipads, oil field pads, rooftop pads',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="26" r="16" fill="#3d7fff" opacity="0.15" stroke="#3d7fff" stroke-width="2"/>
+      <text x="15" y="32" font-size="18" font-weight="bold" fill="#3d7fff" font-family="monospace">H</text>
+    </svg>` },
+
+  { id:'av04', name:'Drone Launch Point', category:'aviation', code:'AVN-DRN',
+    description:'Designated drone take-off and landing zone.',
+    usage:'UAS operations, survey launch points',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="26" r="14" fill="none" stroke="#f0a030" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <circle cx="26" cy="26" r="4" fill="#f0a030"/>
+      <line x1="16" y1="16" x2="20" y2="20" stroke="#f0a030" stroke-width="1.5"/>
+      <line x1="36" y1="16" x2="32" y2="20" stroke="#f0a030" stroke-width="1.5"/>
+      <line x1="16" y1="36" x2="20" y2="32" stroke="#f0a030" stroke-width="1.5"/>
+      <line x1="36" y1="36" x2="32" y2="32" stroke="#f0a030" stroke-width="1.5"/>
+      <circle cx="14" cy="14" r="3" fill="#f0a030" opacity="0.7"/>
+      <circle cx="38" cy="14" r="3" fill="#f0a030" opacity="0.7"/>
+      <circle cx="14" cy="38" r="3" fill="#f0a030" opacity="0.7"/>
+      <circle cx="38" cy="38" r="3" fill="#f0a030" opacity="0.7"/>
+    </svg>` },
+
+  { id:'av05', name:'No-Fly Zone', category:'aviation', code:'AVN-NFZ',
+    description:'Restricted airspace zone. Red hatched circle.',
+    usage:'Military zones, airport radius, sensitive areas',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="26" r="16" fill="rgba(200,0,0,0.1)" stroke="#cc0000" stroke-width="2"/>
+      <line x1="14" y1="14" x2="38" y2="38" stroke="#cc0000" stroke-width="2.5"/>
+    </svg>` },
+
+  // ── SURVEY CONTROL ────────────────────────────────────────
+  { id:'sc01', name:'Trigonometric Station', category:'control', code:'CTL-TRG',
+    description:'Primary triangulation point. Triangle symbol with dot at centre. Precise known position.',
+    usage:'National triangulation network, 1st/2nd order trig beacons',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="26,8 44,40 8,40" fill="none" stroke="#cc0000" stroke-width="2"/>
+      <circle cx="26" cy="26" r="4" fill="#cc0000"/>
+      <line x1="26" y1="40" x2="26" y2="46" stroke="#cc0000" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'sc02', name:'GPS Control Point', category:'control', code:'CTL-GPS',
+    description:'GPS-established control station. Square with cross symbol.',
+    usage:'CORS stations, GPS campaign benchmarks',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="16" y="16" width="20" height="20" fill="none" stroke="#f0a030" stroke-width="2"/>
+      <line x1="8" y1="26" x2="44" y2="26" stroke="#f0a030" stroke-width="1.5"/>
+      <line x1="26" y1="8" x2="26" y2="44" stroke="#f0a030" stroke-width="1.5"/>
+      <circle cx="26" cy="26" r="3" fill="#f0a030"/>
+    </svg>` },
+
+  { id:'sc03', name:'Benchmark (BM)', category:'control', code:'CTL-BM',
+    description:'Levelling benchmark with known elevation above mean sea level.',
+    usage:'Survey-grade height reference, levelling traverse',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="26,12 36,30 16,30" fill="#3d7fff" opacity="0.7" stroke="#2255aa" stroke-width="1.5"/>
+      <rect x="20" y="30" width="12" height="8" fill="#3d7fff" opacity="0.7" stroke="#2255aa" stroke-width="1.5"/>
+      <text x="21" y="26" font-size="7" fill="white" font-family="monospace" font-weight="bold">BM</text>
+    </svg>` },
+
+  { id:'sc04', name:'Cadastral Beacon', category:'control', code:'CTL-BCN',
+    description:'Land registry boundary beacon. Corner or boundary point marker.',
+    usage:'Cadastral survey, title deed boundaries',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="26" r="8" fill="none" stroke="#00c47a" stroke-width="2"/>
+      <circle cx="26" cy="26" r="2" fill="#00c47a"/>
+      <line x1="26" y1="14" x2="26" y2="18" stroke="#00c47a" stroke-width="1.5"/>
+      <line x1="26" y1="34" x2="26" y2="38" stroke="#00c47a" stroke-width="1.5"/>
+      <line x1="14" y1="26" x2="18" y2="26" stroke="#00c47a" stroke-width="1.5"/>
+      <line x1="34" y1="26" x2="38" y2="26" stroke="#00c47a" stroke-width="1.5"/>
+    </svg>` },
+
+  { id:'sc05', name:'Spot Height', category:'control', code:'CTL-SPH',
+    description:'Spot elevation point. Dot with elevation value.',
+    usage:'Topographic surveys, DEM validation',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="26" cy="28" r="3" fill="#555"/>
+      <text x="30" y="26" font-size="10" fill="#555" font-family="monospace">2476</text>
+      <text x="30" y="36" font-size="7" fill="#888" font-family="monospace">m ASL</text>
+    </svg>` },
+
+  { id:'sc06', name:'CORS Station', category:'control', code:'CTL-CRS',
+    description:'Continuously Operating Reference Station for real-time GPS corrections.',
+    usage:'CORS Kenya network, RTK base stations',
+    svg:`<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg">
+      <rect x="18" y="26" width="16" height="14" fill="#888" stroke="#555" stroke-width="1.5"/>
+      <line x1="26" y1="10" x2="26" y2="26" stroke="#555" stroke-width="2"/>
+      <path d="M16 18 Q26 10 36 18" stroke="#3d7fff" stroke-width="1.5" fill="none"/>
+      <path d="M10 14 Q26 4 42 14" stroke="#3d7fff" stroke-width="1.2" fill="none" opacity="0.6"/>
+      <circle cx="26" cy="10" r="2" fill="#cc0000"/>
+    </svg>` },
+];
+
+// ── Category metadata ──
+const CATEGORIES = {
+  all:        { label:'All Symbols', icon:'⊕', desc:'Browse the complete symbol library.' },
+  roads:      { label:'Roads & Transport', icon:'═', desc:'Road types, railways and transport infrastructure symbols.' },
+  buildings:  { label:'Buildings & Structures', icon:'⬜', desc:'Structures and built environment features.' },
+  vegetation: { label:'Vegetation & Land Cover', icon:'⬡', desc:'Natural and cultivated vegetation types.' },
+  water:      { label:'Water Features', icon:'≈', desc:'Rivers, lakes, wetlands and water infrastructure.' },
+  boundaries: { label:'Boundaries', icon:'┄', desc:'Administrative, cadastral and protected area boundaries.' },
+  utilities:  { label:'Utilities & Infrastructure', icon:'⊞', desc:'Power, pipelines, telecoms and utilities.' },
+  aviation:   { label:'Aviation & UAS', icon:'✈', desc:'Airports, airstrips, helipads and drone operations.' },
+  control:    { label:'Survey Control Points', icon:'◉', desc:'Geodetic and cadastral control marks.' },
+};
+
+// ── State ──
+let currentCat = 'all';
+let searchTerm = '';
+
+// ── Render ──
+function renderSymbols() {
+  const container = document.getElementById('symbols-container');
+  const sections  = {};
+
+  SYMBOLS.forEach(sym => {
+    if (currentCat !== 'all' && sym.category !== currentCat) return;
+    const q = searchTerm.toLowerCase();
+    if (q && !sym.name.toLowerCase().includes(q) &&
+             !sym.description.toLowerCase().includes(q) &&
+             !sym.usage.toLowerCase().includes(q) &&
+             !sym.code.toLowerCase().includes(q)) return;
+    if (!sections[sym.category]) sections[sym.category] = [];
+    sections[sym.category].push(sym);
+  });
+
+  let visibleCount = 0;
+  let html = '';
+  for (const [cat, syms] of Object.entries(sections)) {
+    visibleCount += syms.length;
+    const meta = CATEGORIES[cat];
+    html += `<div class="category-section" id="section-${cat}">
+      <div class="cat-section-header">
+        <span style="font-size:1.2rem;">${meta.icon}</span>
+        <div>
+          <div class="cat-section-title">${meta.label}</div>
+          <div class="cat-section-desc">${meta.desc}</div>
+        </div>
+        <span class="badge badge-info" style="margin-left:auto;">${syms.length}</span>
+      </div>
+      <div class="symbol-grid">
+        ${syms.map(sym => `
+          <div class="symbol-card" onclick="showDetail('${sym.id}')">
+            <div class="symbol-svg-wrap">${sym.svg}</div>
+            <div class="symbol-name">${sym.name}</div>
+            <div class="symbol-code">${sym.code}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>`;
+  }
+
+  if (visibleCount === 0) {
+    html = `<div class="empty-state">
+      <div class="empty-title">No symbols found</div>
+      <div class="empty-text">Try a different search term or category.</div>
+    </div>`;
+  }
+
+  container.innerHTML = html;
+  document.getElementById('visible-count').textContent = `${visibleCount} symbol${visibleCount !== 1 ? 's' : ''}`;
+  document.getElementById('symbol-count-badge').textContent = `${SYMBOLS.length} symbols`;
+}
+
+// ── Category counts ──
+function updateCounts() {
+  const cats = {};
+  SYMBOLS.forEach(s => { cats[s.category] = (cats[s.category]||0)+1; });
+  document.getElementById('cnt-all').textContent = SYMBOLS.length;
+  for (const [cat, count] of Object.entries(cats)) {
+    const el = document.getElementById(`cnt-${cat}`);
+    if (el) el.textContent = count;
+  }
+}
+
+// ── Show detail ──
+function showDetail(id) {
+  const sym = SYMBOLS.find(s => s.id === id);
+  if (!sym) return;
+  document.getElementById('detail-svg').innerHTML = sym.svg;
+  document.getElementById('detail-name').textContent = sym.name;
+  document.getElementById('detail-cat').textContent = `${CATEGORIES[sym.category]?.label || sym.category}  ·  ${sym.code}`;
+  document.getElementById('detail-desc').textContent = sym.description;
+  document.getElementById('detail-meta').innerHTML = `
+    <span class="badge badge-info">Usage: ${sym.usage}</span>
+  `;
+  document.getElementById('symbol-detail-overlay').classList.add('active');
+}
+
+function closeDetail(e) {
+  if (!e || e.target === document.getElementById('symbol-detail-overlay')) {
+    document.getElementById('symbol-detail-overlay').classList.remove('active');
+  }
+}
+
+// ── Category buttons ──
+document.querySelectorAll('.cat-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentCat = btn.dataset.cat;
+    renderSymbols();
+  });
+});
+
+// ── Search ──
+document.getElementById('symbol-search').addEventListener('input', debounce(e => {
+  searchTerm = e.target.value.trim();
+  renderSymbols();
+}, 200));
+
+// ── Init ──
+updateCounts();
+renderSymbols();
+</script>
+</body>
+</html>

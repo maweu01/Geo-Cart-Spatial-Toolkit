@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Area & Distance Calculator — GeoCart Spatial Toolkit</title>
+  <link rel="icon" type="image/svg+xml" href="../../assets/icons/favicon.svg" />
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Draw -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+  <!-- Turf.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@6/turf.min.js"></script>
+  <style>
+    .map-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 1.25rem;
+      height: calc(100vh - var(--nav-height) - 160px);
+      min-height: 500px;
+      padding: 1.5rem 0;
+    }
+    .map-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      overflow-y: auto;
+      max-height: 100%;
+    }
+    .map-container {
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      min-height: 400px;
+    }
+    /* Coordinate display overlay */
+    .coord-overlay {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.35rem 0.7rem;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      z-index: 999;
+      pointer-events: none;
+    }
+    /* Draw tools toolbar */
+    .draw-tools {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .draw-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.6rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--bg-input);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: left;
+    }
+    .draw-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .draw-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+    .draw-btn .di { font-size: 1rem; width: 20px; text-align: center; }
+
+    /* Measurement results */
+    .meas-value {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+    .meas-unit { font-size: 0.7rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .meas-row {
+      display: flex;
+      flex-direction: column;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .meas-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .meas-label {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 0.3rem;
+    }
+
+    /* Feature list */
+    .feature-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 0.4rem;
+      font-size: 0.8rem;
+    }
+    .feature-item-left { display: flex; align-items: center; gap: 0.5rem; }
+    .feature-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+    .feature-type { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-muted); }
+
+    /* Basemap selector */
+    .basemap-btns { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .basemap-btn {
+      padding: 0.3rem 0.6rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--bg-input);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .basemap-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* Override leaflet draw toolbar */
+    .leaflet-draw-toolbar a { background-color: var(--bg-card) !important; color: var(--text-primary) !important; }
+
+    @media (max-width: 900px) {
+      .map-layout { grid-template-columns: 1fr; height: auto; }
+      .map-sidebar { max-height: none; order: 2; }
+      .map-container { height: 60vw; min-height: 320px; order: 1; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <div class="nav-brand">
+    <svg class="nav-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="var(--accent-dim)"/>
+      <circle cx="32" cy="32" r="16" stroke="var(--accent)" stroke-width="2" fill="none"/>
+      <circle cx="32" cy="32" r="5" fill="var(--accent)"/>
+      <line x1="32" y1="12" x2="32" y2="22" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="32" y1="42" x2="32" y2="52" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="12" y1="32" x2="22" y2="32" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="42" y1="32" x2="52" y2="32" stroke="var(--accent)" stroke-width="2"/>
+    </svg>
+    <span class="nav-title">GeoCart <span>Spatial Toolkit</span></span>
+  </div>
+  <div class="nav-actions">
+    <a href="../../index.html" class="nav-back">← Dashboard</a>
+    <button class="theme-toggle" title="Toggle theme">☀</button>
+  </div>
+</nav>
+
+<main class="page-wrapper">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-tag">Module 02</div>
+          <h1 class="page-title">Area & Distance Calculator</h1>
+          <p class="page-subtitle">Draw polygons and lines. Get real-time area, perimeter and distance measurements.</p>
+        </div>
+        <div class="btn-group">
+          <button id="btn-export-geojson" class="btn btn-secondary btn-sm">⬇ Export GeoJSON</button>
+          <label class="btn btn-secondary btn-sm" style="cursor:pointer;">
+            ⬆ Import GeoJSON
+            <input type="file" id="import-geojson-input" accept=".geojson,.json" style="display:none" />
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Map Layout -->
+    <div class="map-layout">
+
+      <!-- Sidebar -->
+      <div class="map-sidebar">
+
+        <!-- Draw Tools -->
+        <div class="card" style="padding:1.25rem;">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">◈</span> Draw Tools</div>
+          </div>
+          <div class="draw-tools">
+            <button class="draw-btn" id="tool-polygon">
+              <span class="di">⬡</span> Draw Polygon
+            </button>
+            <button class="draw-btn" id="tool-polyline">
+              <span class="di">─</span> Draw Line / Route
+            </button>
+            <button class="draw-btn" id="tool-marker">
+              <span class="di">◉</span> Place Marker
+            </button>
+            <button class="draw-btn" id="tool-edit">
+              <span class="di">✎</span> Edit Shapes
+            </button>
+            <button class="draw-btn" id="tool-delete">
+              <span class="di">✕</span> Delete Shape
+            </button>
+            <div class="divider"></div>
+            <button class="draw-btn" id="tool-clear-all" style="color:var(--danger);border-color:var(--danger);">
+              <span class="di">⊗</span> Clear All
+            </button>
+          </div>
+        </div>
+
+        <!-- Measurements -->
+        <div class="card" style="padding:1.25rem;">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊞</span> Measurements</div>
+            <span id="feature-count" style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-muted);">0 features</span>
+          </div>
+          <div>
+            <div class="meas-row">
+              <div class="meas-label">Total Area</div>
+              <div class="meas-value" id="m-area">—</div>
+              <div class="meas-unit" id="m-area-unit"></div>
+            </div>
+            <div class="meas-row">
+              <div class="meas-label">Total Perimeter</div>
+              <div class="meas-value" id="m-perimeter">—</div>
+              <div class="meas-unit" id="m-perimeter-unit"></div>
+            </div>
+            <div class="meas-row">
+              <div class="meas-label">Total Line Length</div>
+              <div class="meas-value" id="m-length">—</div>
+              <div class="meas-unit" id="m-length-unit"></div>
+            </div>
+            <div class="meas-row">
+              <div class="meas-label">Bounding Box</div>
+              <div style="font-family:var(--font-mono);font-size:0.78rem;color:var(--text-secondary);" id="m-bbox">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Features List -->
+        <div class="card" style="padding:1.25rem;">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊕</span> Features</div>
+          </div>
+          <div id="features-list">
+            <div class="empty-state" style="padding:2rem 1rem;">
+              <div class="empty-title" style="font-size:0.85rem;">No features yet</div>
+              <div class="empty-text" style="font-size:0.78rem;">Use the draw tools to add shapes to the map.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basemap Selector -->
+        <div class="card" style="padding:1.25rem;">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊞</span> Basemap</div>
+          </div>
+          <div class="basemap-btns">
+            <button class="basemap-btn active" data-map="osm">OSM Street</button>
+            <button class="basemap-btn" data-map="satellite">Satellite</button>
+            <button class="basemap-btn" data-map="topo">Topo</button>
+            <button class="basemap-btn" data-map="dark">Dark</button>
+          </div>
+        </div>
+
+      </div><!-- /sidebar -->
+
+      <!-- Map -->
+      <div class="map-container">
+        <div id="map"></div>
+        <div class="coord-overlay" id="coord-display">Move mouse over map</div>
+      </div>
+
+    </div><!-- /map-layout -->
+
+  </div>
+</main>
+
+<div id="toast-container"></div>
+
+<script src="../../assets/js/app.js"></script>
+<script>
+/* ============================================================
+   Area & Distance Calculator — Leaflet + Turf.js
+   ============================================================ */
+
+// ── Map Initialization ──
+const map = L.map('map', {
+  center: [-1.286, 36.817], // Nairobi
+  zoom: 10,
+  zoomControl: true
+});
+
+// ── Basemap tiles ──
+const basemaps = {
+  osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors', maxZoom: 19
+  }),
+  satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Esri World Imagery', maxZoom: 19
+  }),
+  topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenTopoMap', maxZoom: 17
+  }),
+  dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© CartoDB', maxZoom: 19
+  })
+};
+basemaps.osm.addTo(map);
+
+// ── Layer for drawn items ──
+const drawnItems = new L.FeatureGroup();
+map.addLayer(drawnItems);
+
+// ── Leaflet Draw Controls ──
+const drawControl = new L.Control.Draw({
+  edit: { featureGroup: drawnItems },
+  draw: {
+    polygon: {
+      shapeOptions: { color: '#00d4c8', weight: 2, fillColor: '#00d4c8', fillOpacity: 0.15 },
+      showArea: true
+    },
+    polyline: {
+      shapeOptions: { color: '#3d7fff', weight: 3 }
+    },
+    marker: {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="width:12px;height:12px;border-radius:50%;background:#f0a030;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5)"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+      })
+    },
+    rectangle: false,
+    circle: false,
+    circlemarker: false
+  }
+});
+map.addControl(drawControl);
+
+// Scale bar
+L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+
+// ── State ──
+let featureCounter = 0;
+let features = [];
+
+// ── Draw Events ──
+map.on(L.Draw.Event.CREATED, (e) => {
+  const layer = e.layer;
+  const type = e.layerType;
+  featureCounter++;
+
+  layer._featureId = featureCounter;
+  layer._featureType = type;
+  drawnItems.addLayer(layer);
+
+  // Bind popup
+  const popupHtml = buildPopup(layer, type, featureCounter);
+  layer.bindPopup(popupHtml, { maxWidth: 280 });
+
+  features.push({ id: featureCounter, type, layer });
+  updateMeasurements();
+  updateFeatureList();
+  Toast.success(`Added ${type} #${featureCounter}`);
+});
+
+map.on(L.Draw.Event.EDITED, () => { updateMeasurements(); updateFeatureList(); });
+map.on(L.Draw.Event.DELETED, (e) => {
+  e.layers.eachLayer(layer => {
+    features = features.filter(f => f.id !== layer._featureId);
+  });
+  updateMeasurements();
+  updateFeatureList();
+});
+
+// ── Build popup HTML ──
+function buildPopup(layer, type, id) {
+  let info = `<div style="font-family:var(--font-mono);font-size:0.8rem;min-width:180px;">`;
+  info += `<div style="font-weight:700;margin-bottom:0.5rem;color:var(--accent);">Feature #${id} — ${type.toUpperCase()}</div>`;
+
+  if (type === 'polygon') {
+    const geo = layer.toGeoJSON();
+    const areaSqm = turf.area(geo);
+    const perim = turf.length(turf.polygonToLine(geo), {units:'meters'});
+    info += `<div>Area: <strong>${formatArea(areaSqm)}</strong></div>`;
+    info += `<div>Perimeter: <strong>${formatDist(perim)}</strong></div>`;
+    info += `<div>Vertices: <strong>${layer.getLatLngs()[0].length}</strong></div>`;
+
+  } else if (type === 'polyline') {
+    const geo = layer.toGeoJSON();
+    const len = turf.length(geo, {units:'meters'});
+    const pts = layer.getLatLngs();
+    info += `<div>Length: <strong>${formatDist(len)}</strong></div>`;
+    info += `<div>Nodes: <strong>${pts.length}</strong></div>`;
+
+  } else if (type === 'marker') {
+    const ll = layer.getLatLng();
+    info += `<div>Lat: <strong>${ll.lat.toFixed(6)}</strong></div>`;
+    info += `<div>Lng: <strong>${ll.lng.toFixed(6)}</strong></div>`;
+  }
+
+  info += `</div>`;
+  return info;
+}
+
+// ── Measurement Update ──
+function updateMeasurements() {
+  let totalAreaSqm = 0;
+  let totalPerimM = 0;
+  let totalLineM = 0;
+  const allGeos = [];
+  let count = 0;
+
+  drawnItems.eachLayer(layer => {
+    count++;
+    const geo = layer.toGeoJSON();
+    allGeos.push(geo);
+
+    if (layer._featureType === 'polygon') {
+      totalAreaSqm += turf.area(geo);
+      const line = turf.polygonToLine(geo);
+      totalPerimM += turf.length(line, {units:'meters'});
+
+    } else if (layer._featureType === 'polyline') {
+      totalLineM += turf.length(geo, {units:'meters'});
+    }
+  });
+
+  document.getElementById('feature-count').textContent = `${count} feature${count !== 1 ? 's' : ''}`;
+
+  setMeas('m-area', 'm-area-unit', totalAreaSqm > 0 ? formatArea(totalAreaSqm) : '—', totalAreaSqm > 0 ? getAreaUnit(totalAreaSqm) : '');
+  setMeas('m-perimeter', 'm-perimeter-unit', totalPerimM > 0 ? formatDist(totalPerimM) : '—', totalPerimM > 0 ? getDistUnit(totalPerimM) : '');
+  setMeas('m-length', 'm-length-unit', totalLineM > 0 ? formatDist(totalLineM) : '—', totalLineM > 0 ? getDistUnit(totalLineM) : '');
+
+  // Bounding box
+  if (allGeos.length > 0 && count > 0) {
+    try {
+      const fc = turf.featureCollection(allGeos);
+      const bb = turf.bbox(fc);
+      document.getElementById('m-bbox').innerHTML =
+        `W:${bb[0].toFixed(5)} S:${bb[1].toFixed(5)}<br>E:${bb[2].toFixed(5)} N:${bb[3].toFixed(5)}`;
+    } catch { document.getElementById('m-bbox').textContent = '—'; }
+  } else {
+    document.getElementById('m-bbox').textContent = '—';
+  }
+}
+
+function setMeas(valId, unitId, val, unit) {
+  document.getElementById(valId).textContent = val;
+  document.getElementById(unitId).textContent = unit;
+}
+
+// ── Feature List Update ──
+function updateFeatureList() {
+  const container = document.getElementById('features-list');
+  const colors = { polygon: '#00d4c8', polyline: '#3d7fff', marker: '#f0a030' };
+
+  let count = 0;
+  drawnItems.eachLayer(() => count++);
+
+  if (count === 0) {
+    container.innerHTML = `<div class="empty-state" style="padding:2rem 1rem;">
+      <div class="empty-title" style="font-size:0.85rem;">No features yet</div>
+      <div class="empty-text" style="font-size:0.78rem;">Use the draw tools to add shapes to the map.</div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  drawnItems.eachLayer(layer => {
+    const type = layer._featureType || 'unknown';
+    const id = layer._featureId || '?';
+    const color = colors[type] || '#888';
+    let detail = '';
+
+    try {
+      if (type === 'polygon') {
+        const geo = layer.toGeoJSON();
+        detail = formatArea(turf.area(geo));
+      } else if (type === 'polyline') {
+        const geo = layer.toGeoJSON();
+        detail = formatDist(turf.length(geo, {units:'meters'}));
+      } else if (type === 'marker') {
+        const ll = layer.getLatLng();
+        detail = `${ll.lat.toFixed(4)}, ${ll.lng.toFixed(4)}`;
+      }
+    } catch {}
+
+    html += `<div class="feature-item">
+      <div class="feature-item-left">
+        <div class="feature-dot" style="background:${color}"></div>
+        <span style="font-family:var(--font-mono);font-size:0.78rem;">#${id} ${type}</span>
+      </div>
+      <span class="feature-type">${detail}</span>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ── Format Helpers ──
+function formatArea(sqm) {
+  if (sqm >= 1e6) return `${(sqm/1e6).toFixed(4)} km²`;
+  if (sqm >= 1e4) return `${(sqm/1e4).toFixed(4)} ha`;
+  return `${sqm.toFixed(2)} m²`;
+}
+function getAreaUnit(sqm) {
+  if (sqm >= 1e6) return 'square kilometers';
+  if (sqm >= 1e4) return 'hectares';
+  return 'square meters';
+}
+function formatDist(m) {
+  if (m >= 1000) return `${(m/1000).toFixed(3)} km`;
+  return `${m.toFixed(2)} m`;
+}
+function getDistUnit(m) {
+  return m >= 1000 ? 'kilometers' : 'meters';
+}
+
+// ── Mouse coordinate display ──
+map.on('mousemove', (e) => {
+  const el = document.getElementById('coord-display');
+  el.textContent = `${e.latlng.lat.toFixed(6)}°, ${e.latlng.lng.toFixed(6)}°`;
+});
+
+// ── Sidebar draw buttons → trigger Leaflet Draw ──
+let activeDrawHandler = null;
+
+function activateDrawTool(toolId, DrawClass, opts) {
+  // Deactivate current
+  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  if (activeDrawHandler) { activeDrawHandler.disable(); activeDrawHandler = null; }
+
+  const btn = document.getElementById(toolId);
+  if (btn) btn.classList.add('active');
+
+  activeDrawHandler = new DrawClass(map, opts || {});
+  activeDrawHandler.enable();
+
+  // Auto-deactivate after drawing
+  map.once(L.Draw.Event.CREATED, () => {
+    if (btn) btn.classList.remove('active');
+    activeDrawHandler = null;
+  });
+}
+
+document.getElementById('tool-polygon').addEventListener('click', () => {
+  activateDrawTool('tool-polygon', L.Draw.Polygon, {
+    shapeOptions: { color: '#00d4c8', weight: 2, fillColor: '#00d4c8', fillOpacity: 0.15 }
+  });
+});
+document.getElementById('tool-polyline').addEventListener('click', () => {
+  activateDrawTool('tool-polyline', L.Draw.Polyline, {
+    shapeOptions: { color: '#3d7fff', weight: 3 }
+  });
+});
+document.getElementById('tool-marker').addEventListener('click', () => {
+  activateDrawTool('tool-marker', L.Draw.Marker, {});
+});
+document.getElementById('tool-edit').addEventListener('click', () => {
+  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tool-edit').classList.add('active');
+  new L.EditToolbar.Edit(map, { featureGroup: drawnItems }).enable();
+});
+document.getElementById('tool-delete').addEventListener('click', () => {
+  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tool-delete').classList.add('active');
+  new L.EditToolbar.Delete(map, { featureGroup: drawnItems }).enable();
+});
+document.getElementById('tool-clear-all').addEventListener('click', () => {
+  if (!confirm('Clear all features from the map?')) return;
+  drawnItems.clearLayers();
+  features = [];
+  featureCounter = 0;
+  updateMeasurements();
+  updateFeatureList();
+  Toast.info('Map cleared');
+});
+
+// ── Basemap Switcher ──
+document.querySelectorAll('.basemap-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.basemap-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.values(basemaps).forEach(l => map.removeLayer(l));
+    basemaps[btn.dataset.map].addTo(map);
+  });
+});
+
+// ── Export GeoJSON ──
+document.getElementById('btn-export-geojson').addEventListener('click', () => {
+  const layers = [];
+  drawnItems.eachLayer(l => layers.push(l.toGeoJSON()));
+  if (layers.length === 0) { Toast.warning('No features to export'); return; }
+  const fc = turf.featureCollection(layers);
+  exportGeoJSON(fc, `geocart-measurements-${Date.now()}.geojson`);
+});
+
+// ── Import GeoJSON ──
+document.getElementById('import-geojson-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const geo = JSON.parse(ev.target.result);
+      const lyr = L.geoJSON(geo, {
+        style: { color: '#00d4c8', weight: 2, fillColor: '#00d4c8', fillOpacity: 0.15 },
+        onEachFeature(feature, layer) {
+          featureCounter++;
+          layer._featureId = featureCounter;
+          layer._featureType = feature.geometry?.type === 'Point' ? 'marker' :
+            feature.geometry?.type?.includes('Polygon') ? 'polygon' : 'polyline';
+          drawnItems.addLayer(layer);
+          features.push({ id: featureCounter, type: layer._featureType, layer });
+        }
+      });
+      map.fitBounds(lyr.getBounds(), { padding: [20,20] });
+      updateMeasurements();
+      updateFeatureList();
+      Toast.success(`Imported: ${file.name}`);
+    } catch (err) {
+      Toast.error('Invalid GeoJSON file');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
+</script>
+</body>
+</html>

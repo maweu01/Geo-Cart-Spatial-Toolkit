@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Coordinate Converter — GeoCart Spatial Toolkit</title>
+  <link rel="icon" type="image/svg+xml" href="../../assets/icons/favicon.svg" />
+  <link rel="stylesheet" href="../../assets/css/main.css" />
+  <style>
+    .converter-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      padding: 2rem 0;
+    }
+    .input-section { display: flex; flex-direction: column; gap: 1.25rem; }
+    .output-section { display: flex; flex-direction: column; gap: 1rem; }
+    .conv-mode-selector {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .conv-mode-btn {
+      padding: 0.6rem 0.75rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: var(--transition);
+      text-align: center;
+    }
+    .conv-mode-btn.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .conv-mode-btn:hover:not(.active) {
+      border-color: var(--text-muted);
+      color: var(--text-primary);
+    }
+    .dms-grid {
+      display: grid;
+      grid-template-columns: 3fr 2fr 2fr 1fr;
+      gap: 0.5rem;
+      align-items: end;
+    }
+    .dms-grid label { grid-column: 1/-1; }
+    .dms-unit {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      padding: 0 0.4rem;
+      display: flex;
+      align-items: center;
+    }
+    .utm-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .result-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+    .result-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+    }
+    .validate-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      background: var(--bg-input);
+    }
+    .validate-indicator.valid   { border-color: var(--success); color: var(--success); background: var(--success-dim); }
+    .validate-indicator.invalid { border-color: var(--danger);  color: var(--danger);  background: var(--danger-dim);  }
+    .validate-indicator.idle    { color: var(--text-muted); }
+    .quick-coords {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .quick-coord-btn {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0.9rem;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .quick-coord-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .quick-coord-btn .qc-name { color: var(--text-primary); font-weight: 600; }
+    .quick-coord-btn .qc-val  { color: var(--text-muted); font-size: 0.7rem; }
+    @media (max-width: 900px) {
+      .converter-layout { grid-template-columns: 1fr; }
+      .dms-grid { grid-template-columns: 1fr 1fr 1fr; }
+    }
+    @media (max-width: 480px) {
+      .conv-mode-selector { grid-template-columns: 1fr 1fr; }
+      .dms-grid { grid-template-columns: 1fr 1fr; }
+      .result-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <div class="nav-brand">
+    <svg class="nav-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="var(--accent-dim)"/>
+      <circle cx="32" cy="32" r="16" stroke="var(--accent)" stroke-width="2" fill="none"/>
+      <circle cx="32" cy="32" r="5" fill="var(--accent)"/>
+      <line x1="32" y1="12" x2="32" y2="22" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="32" y1="42" x2="32" y2="52" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="12" y1="32" x2="22" y2="32" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="42" y1="32" x2="52" y2="32" stroke="var(--accent)" stroke-width="2"/>
+    </svg>
+    <span class="nav-title">GeoCart <span>Spatial Toolkit</span></span>
+  </div>
+  <div class="nav-actions">
+    <a href="../../index.html" class="nav-back">← Dashboard</a>
+    <button class="theme-toggle" title="Toggle theme">☀</button>
+  </div>
+</nav>
+
+<!-- ── Page ── -->
+<main class="page-wrapper">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="page-header">
+      <div class="page-header-inner">
+        <div>
+          <div class="page-tag">Module 01</div>
+          <h1 class="page-title">Coordinate Converter</h1>
+          <p class="page-subtitle">Convert between Decimal Degrees, DMS, WGS84 and UTM. Kenya CRS support.</p>
+        </div>
+        <div id="validation-indicator" class="validate-indicator idle">
+          ● Enter coordinates to validate
+        </div>
+      </div>
+    </div>
+
+    <!-- Main layout -->
+    <div class="converter-layout">
+
+      <!-- ── Left: Input Panel ── -->
+      <div class="input-section">
+
+        <!-- Mode selector -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊕</span> Conversion Mode</div>
+          </div>
+          <div class="conv-mode-selector">
+            <button class="conv-mode-btn active" data-mode="dd-dms">DD → DMS</button>
+            <button class="conv-mode-btn" data-mode="dms-dd">DMS → DD</button>
+            <button class="conv-mode-btn" data-mode="dd-utm">WGS84 → UTM</button>
+            <button class="conv-mode-btn" data-mode="utm-dd">UTM → WGS84</button>
+          </div>
+
+          <!-- DD Input Panel -->
+          <div id="panel-dd" class="input-panel">
+            <div class="form-group">
+              <label class="form-label">Latitude (Decimal Degrees)</label>
+              <input type="number" id="dd-lat" class="form-control" placeholder="-1.286389" step="any" min="-90" max="90" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Longitude (Decimal Degrees)</label>
+              <input type="number" id="dd-lon" class="form-control" placeholder="36.817223" step="any" min="-180" max="180" />
+            </div>
+          </div>
+
+          <!-- DMS Input Panel -->
+          <div id="panel-dms" class="input-panel" style="display:none;">
+            <div class="form-group">
+              <label class="form-label">Latitude</label>
+              <div class="dms-grid">
+                <input type="number" id="dms-lat-d" class="form-control" placeholder="1" min="0" max="90" />
+                <input type="number" id="dms-lat-m" class="form-control" placeholder="17" min="0" max="59" />
+                <input type="number" id="dms-lat-s" class="form-control" placeholder="11.0" step="any" min="0" max="59.9999" />
+                <select id="dms-lat-dir" class="form-control">
+                  <option value="S">S</option>
+                  <option value="N">N</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Longitude</label>
+              <div class="dms-grid">
+                <input type="number" id="dms-lon-d" class="form-control" placeholder="36" min="0" max="180" />
+                <input type="number" id="dms-lon-m" class="form-control" placeholder="49" min="0" max="59" />
+                <input type="number" id="dms-lon-s" class="form-control" placeholder="2.0" step="any" min="0" max="59.9999" />
+                <select id="dms-lon-dir" class="form-control">
+                  <option value="E">E</option>
+                  <option value="W">W</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- UTM Input Panel -->
+          <div id="panel-utm" class="input-panel" style="display:none;">
+            <div class="utm-grid">
+              <div class="form-group">
+                <label class="form-label">Zone Number</label>
+                <input type="number" id="utm-zone" class="form-control" placeholder="37" min="1" max="60" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Zone Letter</label>
+                <select id="utm-letter" class="form-control">
+                  <option value="S" selected>S (Kenya South)</option>
+                  <option value="N">N (Kenya North)</option>
+                  <option value="M">M</option>
+                  <option value="P">P</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Easting (m)</label>
+                <input type="number" id="utm-e" class="form-control" placeholder="257098" step="any" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Northing (m)</label>
+                <input type="number" id="utm-n" class="form-control" placeholder="9857766" step="any" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Convert Button -->
+          <div style="margin-top:1rem;">
+            <button id="btn-convert" class="btn btn-primary" style="width:100%">⊕ Convert Coordinates</button>
+          </div>
+        </div>
+
+        <!-- Quick Kenya Locations -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">⊞</span> Kenya Reference Points</div>
+            <span style="font-family:var(--font-mono);font-size:0.68rem;color:var(--text-muted);">Click to load</span>
+          </div>
+          <div class="quick-coords">
+            <button class="quick-coord-btn" data-lat="-1.286389" data-lon="36.817223">
+              <span class="qc-name">Nairobi CBD</span>
+              <span class="qc-val">-1.2864°, 36.8172°</span>
+            </button>
+            <button class="quick-coord-btn" data-lat="-4.043477" data-lon="39.668206">
+              <span class="qc-name">Mombasa Port</span>
+              <span class="qc-val">-4.0435°, 39.6682°</span>
+            </button>
+            <button class="quick-coord-btn" data-lat="-0.091702" data-lon="34.767956">
+              <span class="qc-name">Kisumu City</span>
+              <span class="qc-val">-0.0917°, 34.7680°</span>
+            </button>
+            <button class="quick-coord-btn" data-lat="0.516667" data-lon="35.283333">
+              <span class="qc-name">Eldoret</span>
+              <span class="qc-val">0.5167°, 35.2833°</span>
+            </button>
+            <button class="quick-coord-btn" data-lat="-0.310765" data-lon="36.074880">
+              <span class="qc-name">Nakuru</span>
+              <span class="qc-val">-0.3108°, 36.0749°</span>
+            </button>
+            <button class="quick-coord-btn" data-lat="-1.521979" data-lon="40.126564">
+              <span class="qc-name">Malindi</span>
+              <span class="qc-val">-1.5220°, 40.1266°</span>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /input-section -->
+
+      <!-- ── Right: Output Panel ── -->
+      <div class="output-section">
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">◈</span> Conversion Results</div>
+            <button id="btn-clear" class="btn btn-secondary btn-sm">Clear</button>
+          </div>
+
+          <div class="result-grid">
+
+            <!-- Decimal Degrees -->
+            <div class="result-block">
+              <div class="result-label">Decimal Degrees (DD)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                <div>
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.25rem;">LATITUDE</div>
+                  <div class="result-value" id="out-dd-lat">—</div>
+                </div>
+                <div>
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.25rem;">LONGITUDE</div>
+                  <div class="result-value" id="out-dd-lon">—</div>
+                </div>
+              </div>
+              <button class="copy-btn" onclick="copyResult('dd')">COPY</button>
+            </div>
+
+            <!-- DMS -->
+            <div class="result-block">
+              <div class="result-label">Degrees Minutes Seconds (DMS)</div>
+              <div style="display:grid;grid-template-columns:1fr;gap:0.3rem;">
+                <div id="out-dms-lat" class="result-value" style="font-size:0.9rem;">—</div>
+                <div id="out-dms-lon" class="result-value" style="font-size:0.9rem;">—</div>
+              </div>
+              <button class="copy-btn" onclick="copyResult('dms')">COPY</button>
+            </div>
+
+            <!-- UTM -->
+            <div class="result-block">
+              <div class="result-label">Universal Transverse Mercator (UTM) — WGS84</div>
+              <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:0.5rem;align-items:start;">
+                <div>
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.25rem;">ZONE</div>
+                  <div class="result-value" id="out-utm-zone" style="font-size:0.9rem;">—</div>
+                </div>
+                <div>
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.25rem;">EASTING</div>
+                  <div class="result-value" id="out-utm-e" style="font-size:0.9rem;">—</div>
+                </div>
+                <div>
+                  <div style="font-size:0.65rem;color:var(--text-muted);margin-bottom:0.25rem;">NORTHING</div>
+                  <div class="result-value" id="out-utm-n" style="font-size:0.9rem;">—</div>
+                </div>
+              </div>
+              <button class="copy-btn" onclick="copyResult('utm')">COPY</button>
+            </div>
+
+            <!-- MGRS-style / EPSG info -->
+            <div class="result-block">
+              <div class="result-label">EPSG / CRS Reference</div>
+              <div id="out-epsg" class="result-value" style="font-size:0.85rem;line-height:1.7;">—</div>
+            </div>
+
+            <!-- Error Block -->
+            <div id="error-block" class="info-block error" style="display:none;">
+              <span>⚠</span>
+              <span id="error-msg"></span>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span class="icon">ℹ</span> Kenya UTM Zones</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.6rem;">
+            <div class="info-block info">
+              <span>◈</span>
+              <div>
+                <strong>Zone 36S</strong> — Western Kenya (Kakamega, Kisumu, Nakuru, Kericho, Kisii). EPSG:32636<br/>
+                <strong>Zone 37S</strong> — Central Kenya (Nairobi, Thika, Nyeri, Embu). EPSG:32637<br/>
+                <strong>Zone 37N</strong> — Northern Kenya (Marsabit, Turkana). EPSG:32637<br/>
+                <strong>Zone 38S</strong> — Eastern Kenya (Mombasa, Malindi, Lamu). EPSG:32638
+              </div>
+            </div>
+            <div class="info-block warn">
+              <span>▲</span>
+              <div>Kenya spans UTM zones 36–38. Always verify the correct zone before surveying. The equator separates N/S designators.</div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /output-section -->
+    </div><!-- /converter-layout -->
+
+  </div><!-- /container -->
+</main>
+
+<div id="toast-container"></div>
+
+<script src="../../assets/js/app.js"></script>
+<script>
+/* ============================================================
+   Coordinate Converter — Core Logic
+   All math is pure JavaScript, no external CRS libraries.
+   Uses WGS84 ellipsoid constants for UTM conversions.
+   ============================================================ */
+
+// ── Current conversion mode ──
+let currentMode = 'dd-dms';
+
+// ── WGS84 Ellipsoid Constants ──
+const WGS84 = {
+  a:  6378137.0,          // semi-major axis (m)
+  b:  6356752.314245,     // semi-minor axis (m)
+  f:  1 / 298.257223563,  // flattening
+  e2: 0.00669437999014,   // eccentricity squared
+  k0: 0.9996,             // scale factor
+  E0: 500000.0            // false easting
+};
+
+// ── DD to DMS Conversion ──
+function dd2dms(dd) {
+  const abs = Math.abs(dd);
+  const d = Math.floor(abs);
+  const m = Math.floor((abs - d) * 60);
+  const s = ((abs - d) * 60 - m) * 60;
+  return { d, m, s };
+}
+
+function formatDMS(dd, isLat) {
+  if (dd === null || isNaN(dd)) return '—';
+  const { d, m, s } = dd2dms(dd);
+  const dir = isLat ? (dd < 0 ? 'S' : 'N') : (dd < 0 ? 'W' : 'E');
+  return `${d}° ${m}' ${s.toFixed(4)}" ${dir}`;
+}
+
+// ── DMS to DD Conversion ──
+function dms2dd(d, m, s, dir) {
+  const dd = d + (m / 60) + (s / 3600);
+  return (dir === 'S' || dir === 'W') ? -dd : dd;
+}
+
+// ── WGS84 to UTM ──
+function wgs84ToUTM(lat, lon) {
+  const { a, e2, k0, E0 } = WGS84;
+
+  // Auto-detect zone
+  const zoneNum = Math.floor((lon + 180) / 6) + 1;
+  const lon0 = (zoneNum - 1) * 6 - 180 + 3; // central meridian
+
+  const latR = lat * Math.PI / 180;
+  const lonR = lon * Math.PI / 180;
+  const lon0R = lon0 * Math.PI / 180;
+
+  const ep2 = e2 / (1 - e2);
+  const N = a / Math.sqrt(1 - e2 * Math.sin(latR) ** 2);
+  const T = Math.tan(latR) ** 2;
+  const C = ep2 * Math.cos(latR) ** 2;
+  const A = Math.cos(latR) * (lonR - lon0R);
+
+  const M = a * (
+    (1 - e2/4 - 3*e2**2/64 - 5*e2**3/256) * latR
+    - (3*e2/8 + 3*e2**2/32 + 45*e2**3/1024) * Math.sin(2*latR)
+    + (15*e2**2/256 + 45*e2**3/1024) * Math.sin(4*latR)
+    - (35*e2**3/3072) * Math.sin(6*latR)
+  );
+
+  const x = k0 * N * (
+    A + (1-T+C)*A**3/6 + (5-18*T+T**2+72*C-58*ep2)*A**5/120
+  ) + E0;
+
+  const N0 = lat < 0 ? 10000000.0 : 0.0; // false northing
+
+  const y = k0 * (M + N * Math.tan(latR) * (
+    A**2/2 + (5-T+9*C+4*C**2)*A**4/24 + (61-58*T+T**2+600*C-330*ep2)*A**6/720
+  )) + N0;
+
+  // Zone letter
+  const letters = 'CDEFGHJKLMNPQRSTUVWXX';
+  const zoneLetterIdx = Math.floor((lat + 80) / 8);
+  const zoneLetter = letters[Math.min(Math.max(zoneLetterIdx, 0), letters.length-1)];
+
+  return { zone: zoneNum, letter: zoneLetter, easting: x, northing: y };
+}
+
+// ── UTM to WGS84 ──
+function utmToWGS84(zone, letter, easting, northing) {
+  const { a, e2, k0, E0 } = WGS84;
+  const ep2 = e2 / (1 - e2);
+
+  const isNorth = letter >= 'N';
+  const N0 = isNorth ? 0 : 10000000;
+  const lon0 = (zone - 1) * 6 - 180 + 3;
+  const lon0R = lon0 * Math.PI / 180;
+
+  const x = easting - E0;
+  const y = northing - N0;
+
+  const M = y / k0;
+  const mu = M / (a * (1 - e2/4 - 3*e2**2/64 - 5*e2**3/256));
+
+  const e1 = (1 - Math.sqrt(1-e2)) / (1 + Math.sqrt(1-e2));
+  const phi1 = mu
+    + (3*e1/2 - 27*e1**3/32) * Math.sin(2*mu)
+    + (21*e1**2/16 - 55*e1**4/32) * Math.sin(4*mu)
+    + (151*e1**3/96) * Math.sin(6*mu)
+    + (1097*e1**4/512) * Math.sin(8*mu);
+
+  const N1 = a / Math.sqrt(1 - e2 * Math.sin(phi1)**2);
+  const T1 = Math.tan(phi1)**2;
+  const C1 = ep2 * Math.cos(phi1)**2;
+  const R1 = a*(1-e2) / (1-e2*Math.sin(phi1)**2)**1.5;
+  const D  = x / (N1 * k0);
+
+  const lat = phi1 - (N1 * Math.tan(phi1) / R1) * (
+    D**2/2 - (5+3*T1+10*C1-4*C1**2-9*ep2)*D**4/24
+    + (61+90*T1+298*C1+45*T1**2-252*ep2-3*C1**2)*D**6/720
+  );
+
+  const lon = lon0R + (
+    D - (1+2*T1+C1)*D**3/6
+    + (5-2*C1+(28*T1)-3*C1**2+8*ep2+24*T1**2)*D**5/120
+  ) / Math.cos(phi1);
+
+  return {
+    lat: lat * 180 / Math.PI,
+    lon: lon * 180 / Math.PI
+  };
+}
+
+// ── Validation ──
+function validateLatLon(lat, lon) {
+  if (isNaN(lat) || isNaN(lon)) return { valid: false, msg: 'Invalid number format' };
+  if (lat < -90 || lat > 90)   return { valid: false, msg: `Latitude ${lat}° out of range (-90 to 90)` };
+  if (lon < -180 || lon > 180) return { valid: false, msg: `Longitude ${lon}° out of range (-180 to 180)` };
+  return { valid: true };
+}
+
+// ── EPSG Reference ──
+function getEPSGInfo(lat, lon) {
+  const zoneNum = Math.floor((lon + 180) / 6) + 1;
+  const isNorth = lat >= 0;
+  const epsg = isNorth ? 32600 + zoneNum : 32700 + zoneNum;
+  const hem = isNorth ? 'N' : 'S';
+  return `WGS84 / UTM Zone ${zoneNum}${hem}  •  EPSG:${epsg}  •  Geographic: EPSG:4326`;
+}
+
+// ── Render Results ──
+function renderResults(lat, lon) {
+  const v = validateLatLon(lat, lon);
+  const errBlock = document.getElementById('error-block');
+  const indicator = document.getElementById('validation-indicator');
+
+  if (!v.valid) {
+    errBlock.style.display = 'flex';
+    document.getElementById('error-msg').textContent = v.msg;
+    indicator.className = 'validate-indicator invalid';
+    indicator.textContent = '✕ Invalid coordinates';
+    clearOutputs();
+    return;
+  }
+
+  errBlock.style.display = 'none';
+  indicator.className = 'validate-indicator valid';
+  indicator.textContent = `✓ Valid  |  ${lat >= 0 ? 'N' : 'S'} ${Math.abs(lat).toFixed(6)}°  ${lon >= 0 ? 'E' : 'W'} ${Math.abs(lon).toFixed(6)}°`;
+
+  // Decimal Degrees
+  document.getElementById('out-dd-lat').textContent = lat.toFixed(8);
+  document.getElementById('out-dd-lon').textContent = lon.toFixed(8);
+
+  // DMS
+  document.getElementById('out-dms-lat').textContent = formatDMS(lat, true);
+  document.getElementById('out-dms-lon').textContent = formatDMS(lon, false);
+
+  // UTM
+  const utm = wgs84ToUTM(lat, lon);
+  document.getElementById('out-utm-zone').textContent = `${utm.zone}${utm.letter}`;
+  document.getElementById('out-utm-e').textContent = utm.easting.toFixed(3) + ' m';
+  document.getElementById('out-utm-n').textContent = utm.northing.toFixed(3) + ' m';
+
+  // EPSG
+  document.getElementById('out-epsg').textContent = getEPSGInfo(lat, lon);
+
+  // Store for copy
+  window._lastResult = { lat, lon, utm };
+}
+
+function clearOutputs() {
+  ['out-dd-lat','out-dd-lon','out-dms-lat','out-dms-lon','out-utm-zone','out-utm-e','out-utm-n','out-epsg']
+    .forEach(id => { const el = document.getElementById(id); if(el) el.textContent = '—'; });
+  window._lastResult = null;
+}
+
+// ── Convert Button Handler ──
+function doConvert() {
+  let lat, lon;
+  const errBlock = document.getElementById('error-block');
+
+  try {
+    if (currentMode === 'dd-dms' || currentMode === 'dd-utm') {
+      lat = parseFloat(document.getElementById('dd-lat').value);
+      lon = parseFloat(document.getElementById('dd-lon').value);
+
+    } else if (currentMode === 'dms-dd') {
+      const ld = parseFloat(document.getElementById('dms-lat-d').value)||0;
+      const lm = parseFloat(document.getElementById('dms-lat-m').value)||0;
+      const ls = parseFloat(document.getElementById('dms-lat-s').value)||0;
+      const ld2 = document.getElementById('dms-lat-dir').value;
+      const od = parseFloat(document.getElementById('dms-lon-d').value)||0;
+      const om = parseFloat(document.getElementById('dms-lon-m').value)||0;
+      const os = parseFloat(document.getElementById('dms-lon-s').value)||0;
+      const od2 = document.getElementById('dms-lon-dir').value;
+      lat = dms2dd(ld, lm, ls, ld2);
+      lon = dms2dd(od, om, os, od2);
+
+    } else if (currentMode === 'utm-dd') {
+      const zone = parseInt(document.getElementById('utm-zone').value);
+      const letter = document.getElementById('utm-letter').value;
+      const e = parseFloat(document.getElementById('utm-e').value);
+      const n = parseFloat(document.getElementById('utm-n').value);
+      if (!zone || isNaN(e) || isNaN(n)) throw new Error('Enter zone, easting and northing');
+      const result = utmToWGS84(zone, letter, e, n);
+      lat = result.lat;
+      lon = result.lon;
+    }
+
+    renderResults(lat, lon);
+
+  } catch (err) {
+    errBlock.style.display = 'flex';
+    document.getElementById('error-msg').textContent = err.message;
+  }
+}
+
+// ── Copy Results ──
+function copyResult(type) {
+  if (!window._lastResult) { Toast.warning('No result to copy'); return; }
+  const { lat, lon, utm } = window._lastResult;
+  let text = '';
+
+  if (type === 'dd') {
+    text = `${lat.toFixed(8)}, ${lon.toFixed(8)}`;
+  } else if (type === 'dms') {
+    text = `${formatDMS(lat, true)}, ${formatDMS(lon, false)}`;
+  } else if (type === 'utm') {
+    text = `Zone ${utm.zone}${utm.letter}  E: ${utm.easting.toFixed(3)}  N: ${utm.northing.toFixed(3)}`;
+  }
+  copyToClipboard(text);
+}
+
+// ── Mode Switch ──
+document.querySelectorAll('.conv-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.conv-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+
+    // Show/hide panels
+    const showDD  = currentMode === 'dd-dms' || currentMode === 'dd-utm';
+    const showDMS = currentMode === 'dms-dd';
+    const showUTM = currentMode === 'utm-dd';
+
+    document.getElementById('panel-dd').style.display  = showDD ? 'block' : 'none';
+    document.getElementById('panel-dms').style.display = showDMS ? 'block' : 'none';
+    document.getElementById('panel-utm').style.display = showUTM ? 'block' : 'none';
+    clearOutputs();
+    document.getElementById('validation-indicator').className = 'validate-indicator idle';
+    document.getElementById('validation-indicator').textContent = '● Enter coordinates to validate';
+    document.getElementById('error-block').style.display = 'none';
+  });
+});
+
+// ── Quick Coord Buttons ──
+document.querySelectorAll('.quick-coord-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const lat = parseFloat(btn.dataset.lat);
+    const lon = parseFloat(btn.dataset.lon);
+    // Switch to DD mode
+    document.querySelector('[data-mode="dd-dms"]').click();
+    document.getElementById('dd-lat').value = lat;
+    document.getElementById('dd-lon').value = lon;
+    doConvert();
+  });
+});
+
+// ── Convert on Enter ──
+document.querySelectorAll('.form-control').forEach(el => {
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') doConvert(); });
+});
+
+// ── Button Events ──
+document.getElementById('btn-convert').addEventListener('click', doConvert);
+document.getElementById('btn-clear').addEventListener('click', () => {
+  clearOutputs();
+  document.querySelectorAll('.form-control').forEach(el => { el.value = ''; });
+  document.getElementById('validation-indicator').className = 'validate-indicator idle';
+  document.getElementById('validation-indicator').textContent = '● Enter coordinates to validate';
+  document.getElementById('error-block').style.display = 'none';
+});
+</script>
+</body>
+</html>

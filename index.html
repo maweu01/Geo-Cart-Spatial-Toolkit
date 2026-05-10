@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="GeoCart Spatial Toolkit — Professional geospatial tools for GeoCart Surveys & Engineering" />
+  <title>GeoCart Spatial Toolkit</title>
+  <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg" />
+  <link rel="stylesheet" href="assets/css/main.css" />
+  <style>
+    /* ── Homepage Specific Styles ── */
+    .home-hero {
+      padding: 5rem 0 3rem;
+      text-align: center;
+      position: relative;
+    }
+    .hero-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+    .hero-eyebrow::before, .hero-eyebrow::after {
+      content: '';
+      width: 40px;
+      height: 1px;
+      background: var(--accent);
+      opacity: 0.5;
+    }
+    .hero-title {
+      font-family: var(--font-mono);
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1rem;
+    }
+    .hero-title span { color: var(--accent); }
+    .hero-subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 580px;
+      margin: 0 auto 1.5rem;
+      line-height: 1.7;
+    }
+    .hero-meta {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    .hero-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+    .hero-meta-item span { color: var(--accent); font-weight: 600; }
+
+    /* ── Module Grid ── */
+    .modules-section {
+      padding: 2rem 0 4rem;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+    }
+    .section-title {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+    .module-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      text-decoration: none;
+      color: inherit;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+    .module-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--module-accent, var(--accent));
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .module-card:hover {
+      border-color: var(--module-accent, var(--accent));
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    .module-card:hover::before { opacity: 1; }
+    .module-icon-wrap {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius);
+      background: var(--module-accent-dim, var(--accent-dim));
+      border: 1px solid var(--module-accent, var(--accent));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+    .module-info {}
+    .module-num {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--module-accent, var(--accent));
+      margin-bottom: 0.3rem;
+    }
+    .module-name {
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.4rem;
+      letter-spacing: -0.01em;
+    }
+    .module-desc {
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .module-tags {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+      margin-top: auto;
+    }
+    .module-tag {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      background: var(--bg-active);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .module-arrow {
+      position: absolute;
+      top: 1.75rem;
+      right: 1.75rem;
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      transition: var(--transition);
+    }
+    .module-card:hover .module-arrow {
+      color: var(--module-accent, var(--accent));
+      transform: translate(3px, -3px);
+    }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      background: var(--bg-surface);
+      border-top: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      position: relative;
+    }
+    .status-bar-left, .status-bar-right {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+      animation: pulse 2s infinite;
+      display: inline-block;
+      margin-right: 0.4rem;
+    }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+    /* ── Crosshair decorative grid ── */
+    .hero-grid {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(var(--border-subtle) 1px, transparent 1px),
+        linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .hero-grid-content { position: relative; z-index: 1; }
+
+    @media (max-width: 600px) {
+      .module-grid { grid-template-columns: 1fr; }
+      .hero-meta { gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Navigation ── -->
+<nav class="nav">
+  <div class="nav-brand">
+    <svg class="nav-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+      <rect width="64" height="64" rx="10" fill="var(--accent-dim)"/>
+      <circle cx="32" cy="32" r="16" stroke="var(--accent)" stroke-width="2" fill="none"/>
+      <circle cx="32" cy="32" r="5" fill="var(--accent)"/>
+      <line x1="32" y1="12" x2="32" y2="22" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="32" y1="42" x2="32" y2="52" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="12" y1="32" x2="22" y2="32" stroke="var(--accent)" stroke-width="2"/>
+      <line x1="42" y1="32" x2="52" y2="32" stroke="var(--accent)" stroke-width="2"/>
+    </svg>
+    <span class="nav-title">GeoCart <span>Spatial Toolkit</span></span>
+  </div>
+  <div class="nav-actions">
+    <span id="nav-version" style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">v1.0.0</span>
+    <button class="theme-toggle" id="themeBtn" title="Toggle theme">☀</button>
+  </div>
+</nav>
+
+<!-- ── Main Content ── -->
+<main class="page-wrapper">
+
+  <!-- Hero Section -->
+  <div class="home-hero">
+    <div class="hero-grid"></div>
+    <div class="hero-grid-content container">
+      <div class="hero-eyebrow">GeoCart Surveys & Engineering</div>
+      <h1 class="hero-title">Spatial<br><span>Toolkit</span></h1>
+      <p class="hero-subtitle">
+        A professional-grade static geospatial platform for field surveyors, GIS analysts, and drone pilots.
+        Runs entirely in the browser — no server required.
+      </p>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><span>6</span> Modules</div>
+        <div class="hero-meta-item"><span>100%</span> Client-Side</div>
+        <div class="hero-meta-item"><span>Kenya</span> CRS Focus</div>
+        <div class="hero-meta-item"><span>Offline</span> Capable</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modules -->
+  <section class="modules-section">
+    <div class="container">
+      <div class="section-header">
+        <div class="section-title">// Available Modules</div>
+        <div style="font-family:var(--font-mono);font-size:0.72rem;color:var(--text-muted);">6 tools loaded</div>
+      </div>
+
+      <div class="module-grid">
+
+        <!-- Module 01: Coordinate Converter -->
+        <a href="modules/coordinate-converter/index.html" class="module-card"
+           style="--module-accent:#00d4c8;--module-accent-dim:rgba(0,212,200,0.08);">
+          <div class="module-icon-wrap" style="color:#00d4c8;">⊕</div>
+          <div class="module-info">
+            <div class="module-num">Module 01</div>
+            <div class="module-name">Coordinate Converter</div>
+            <div class="module-desc">Convert between DD, DMS, WGS84, UTM. Auto-detect UTM zones. Kenya CRS support. Clipboard export.</div>
+          </div>
+          <div class="module-tags">
+            <span class="module-tag">DD ↔ DMS</span>
+            <span class="module-tag">WGS84</span>
+            <span class="module-tag">UTM</span>
+            <span class="module-tag">Kenya</span>
+          </div>
+          <span class="module-arrow">↗</span>
+        </a>
+
+        <!-- Module 02: Area Calculator -->
+        <a href="modules/area-calculator/index.html" class="module-card"
+           style="--module-accent:#3d7fff;--module-accent-dim:rgba(61,127,255,0.08);">
+          <div class="module-icon-wrap" style="color:#3d7fff;">◈</div>
+          <div class="module-info">
+            <div class="module-num">Module 02</div>
+            <div class="module-name">Area & Distance Calculator</div>
+            <div class="module-desc">Draw polygons and lines on an interactive map. Compute area, perimeter, distance in real time. GeoJSON export.</div>
+          </div>
+          <div class="module-tags">
+            <span class="module-tag">Leaflet</span>
+            <span class="module-tag">Turf.js</span>
+            <span class="module-tag">GeoJSON</span>
+            <span class="module-tag">Draw Tools</span>
+          </div>
+          <span class="module-arrow">↗</span>
+        </a>
+
+        <!-- Module 03: Drone Flight Log -->
+        <a href="modules/flight-log/index.html" class="module-card"
+           style="--module-accent:#f0a030;--module-accent-dim:rgba(240,160,48,0.08);">
+          <div class="module-icon-wrap" style="color:#f0a030;">✈</div>
+          <div class="module-info">
+            <div class="module-num">Module 03</div>
+            <div class="module-name">Drone Flight Log</div>
+            <div class="module-desc">Aviation-grade flight log system. Log missions, track battery cycles, record maintenance. CSV import/export.</div>
+          </div>
+          <div class="module-tags">
+            <span class="module-tag">LocalStorage</span>
+            <span class="module-tag">CSV Export</span>
+            <span class="module-tag">Searchable</span>
+            <span class="module-tag">Empty Start</span>
+          </div>
+          <span class="module-arrow">↗</span>
+        </a>
+
+        <!-- Module 04: Survey Symbols -->
+        <a href="modules/survey-symbols/index.html" class="module-card"
+           style="--module-accent:#9b59b6;--module-accent-dim:rgba(155,89,182,0.08);">
+          <div class="module-icon-wrap" style="color:#9b59b6;">⬡</div>
+          <div class="module-info">
+            <div class="module-num">Module 04</div>
+            <div class="module-name">Survey Symbol Reference</div>
+            <div class="module-desc">Complete GIS and cartographic symbol library. Searchable categories: Roads, Utilities, Aviation, Control Points, Vegetation.</div>
+          </div>
+          <div class="module-tags">
+            <span class="module-tag">SVG Symbols</span>
+            <span class="module-tag">GIS</span>
+            <span class="module-tag">Cartography</span>
+            <span class="module-tag">Searchable</span>
+          </div>
+          <span class="module-arrow">↗</span>
+        </a>
+
+        <!-- Module 05: Kenya CRS Guide -->
+        <a href="modules/kenya-guide/index.html" class="module-card"
+           style="--module-accent:#00c47a;--module-accent-dim:rgba(0,196,122,0.08);">
+          <div class="module-icon-wrap" style="color:#00c47a;">⊞</div>
+          <div class="module-info">
+            <div class="module-num">Module 05</div>
+            <div class="module-name">Kenya Coordinate Guide</div>
+            <div class="module-desc">Comprehensive reference for Kenya's coordinate reference systems. UTM zones, EPSG codes, WGS84, projection best practices.</div>
+          </div>
+          <div class="module-tags">
+            <span class="module-tag">WGS84</span>
+            <span class="module-tag">UTM</span>
+            <span class="module-tag">EPSG</span>
+            <span class="module-tag">Kenya</span>
+          </div>
+          <span class="module-arrow">↗</span>
+        </a>
+
+        <!-- Module 06: GeoJSON Viewer -->
+        <a href="modules/geojson-viewer/index.html" class="module-card"
+           style="--module-accent:#ff6b6b;--module-accent-dim:rgba(255,107,107,0.08);">
+          <div class="module-icon-wrap" style="color:#ff6b6b;">◉</div>
+          <div class="module-info">
+            <div class="module-num">Module 06</div>
+            <div class="module-name">GeoJSON / KML Viewer</div>
+            <div class="module-desc">Drag-and-drop GeoJSON and KML viewer. Inspect feature properties, geometry stats, bounding box. 100% client-side.</div>
+          </div>
+          <div class="module-tags">
+            <span class="module-tag">GeoJSON</span>
+            <span class="module-tag">KML</span>
+            <span class="module-tag">Drag & Drop</span>
+            <span class="module-tag">No Upload</span>
+          </div>
+          <span class="module-arrow">↗</span>
+        </a>
+
+      </div><!-- /module-grid -->
+    </div>
+  </section>
+
+</main>
+
+<!-- ── Status Bar ── -->
+<div class="status-bar">
+  <div class="status-bar-left">
+    <span><span class="status-dot"></span>SYSTEM READY</span>
+    <span id="sb-version" style="color:var(--accent);">GeoCart Spatial Toolkit v1.0.0</span>
+    <span>GeoCart Surveys & Engineering</span>
+  </div>
+  <div class="status-bar-right">
+    <span id="sb-time"></span>
+    <span id="sb-theme">THEME: DARK</span>
+  </div>
+</div>
+
+<!-- ── Toast Container ── -->
+<div id="toast-container"></div>
+
+<script src="assets/js/app.js"></script>
+<script>
+  // Status bar clock
+  function updateClock() {
+    const now = new Date();
+    const t = now.toTimeString().slice(0, 8);
+    const d = now.toDateString();
+    const el = document.getElementById('sb-time');
+    if (el) el.textContent = `${d}  ${t} EAT`;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Track theme change for status bar
+  const themeSbEl = document.getElementById('sb-theme');
+  const observer = new MutationObserver(() => {
+    const t = document.documentElement.getAttribute('data-theme') || 'dark';
+    if (themeSbEl) themeSbEl.textContent = `THEME: ${t.toUpperCase()}`;
+  });
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+</script>
+</body>
+</html>
